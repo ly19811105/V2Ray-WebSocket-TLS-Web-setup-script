@@ -1045,12 +1045,15 @@ get_web()
 #使用vmess作为底层协议
 back_to_vmess()
 {
-    if_back_to_socks=""
-    while [ "$if_back_to_socks" != "y" -a "$if_back_to_socks" != "n" ]
+    if_back_to_vmess=""
+    while [ "$if_back_to_vmess" != "y" -a "$if_back_to_vmess" != "n" ]
     do
         tyblue "返回vmess作为底层协议?(y/n)"
-        read if_back_to_socks
+        read if_back_to_vmess
     done
+    if [ $if_back_to_vmess == "n" ]; then
+        exit 0;
+    fi
     if [ ! -e /etc/v2ray/config.json ] || [ ! -e /etc/nginx ] ; then
         red "请先安装V2Ray-WebSocket(ws)+TLS(1.3)+Web！！"
         exit 1;
@@ -1060,7 +1063,7 @@ back_to_vmess()
     config_v2ray_vmess
     service v2ray restart
     green "配置完成！！！"
-    green "新的用户id：$v2id"
+    green "用户ID：$v2id"
 }
 
 #使用socks作为底层协议
