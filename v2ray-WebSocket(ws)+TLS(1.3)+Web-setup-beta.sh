@@ -1205,7 +1205,7 @@ start_menu()
     tyblue "12.仅升级V2Ray"
     yellow "13.退出脚本"
     echo
-    menu="3345"
+    menu=""
     while [ "$menu" != "1" -a "$menu" != "2" -a "$menu" != "3" -a "$menu" != "4" -a "$menu" != "5" -a "$menu" != "6" -a "$menu" != "7" -a "$menu" != "8" -a "$menu" != "9" -a "$menu" != "10" -a "$menu" != "11" -a "$menu" != "12" -a "$menu" != "13" ]
     do
         read -p "您的选择是：" menu
@@ -1214,11 +1214,12 @@ start_menu()
         1)
             if [ -e /etc/v2ray/config.json ] && [ -e /etc/nginx ] ; then
                 green  "***********检测到已安装V2Ray-WebSocket+TLS+Web***********"
-                yellow "此选项将会删除现有V2Ray-WebSocket+TLS+Web并重新安装"
-                tyblue "您可能有以下需求：\n"
+                yellow "此选项将会删除现有V2Ray-WebSocket+TLS+Web并重新安装\n"
+                tyblue "您可能有以下需求："
                 green  "1.安装完成后，无法连接，尝试重新安装"
                 tyblue "  请尝试检查服务器防火墙443端口、80端口是否打开"
-                tyblue "  选择选项5.重置域名和TLS配置尝试修复\n"
+                tyblue "  选择选项5.重置域名和TLS配置尝试修复"
+                tyblue "  以上两步都做了，仍然无法修复，可以重新安装\n"
                 green  "2.更新V2Ray-WebSocket+TLS+Web"
                 tyblue "  请删除现有脚本，获取最新脚本，再安装\n"
                 green  "3.安装的时候域名写错了，导致安装完成后无法连接"
