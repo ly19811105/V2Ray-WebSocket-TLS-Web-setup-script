@@ -407,8 +407,6 @@ updateSystem()
             do-release-upgrade
             sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
             do-release-upgrade -d
-            do-release-upgrade -d
-            do-release-upgrade
             do-release-upgrade
             ;;
         2)
@@ -732,8 +730,10 @@ get_certs()
     case "$domainconfig" in
         1)
             ~/.acme.sh/acme.sh --issue -d $domain -d www.$domain --webroot /etc/nginx/html -k ec-256 --ocsp
+            ~/.acme.sh/acme.sh --issue -d $domain -d www.$domain --webroot /etc/nginx/html -k ec-256 --ocsp
             ;;
         2)
+            ~/.acme.sh/acme.sh --issue -d $domain --webroot /etc/nginx/html -k ec-256 --ocsp
             ~/.acme.sh/acme.sh --issue -d $domain --webroot /etc/nginx/html -k ec-256 --ocsp
             ;;
     esac
@@ -796,12 +796,12 @@ install_v2ray_ws_tls()
             apt -y purge gcc g++ gcc-9 gcc-9-base gcc-8-base gcc-7-base g++-9 gcc-8 g++-8 gcc-7 g++-7
             apt autopurge -y
             apt -y install gcc-10 g++-10
-            ln -s /usr/bin/gcc-10 /usr/bin/gcc
-            ln -s /usr/bin/gcc-10 /usr/bin/cc
-            ln -s /usr/bin/g++-10 /usr/bin/g++
-            ln -s /usr/bin/g++-10 /usr/bin/c++
-            ln -s /usr/bin/gcc-10 /usr/bin/x86_64-linux-gnu-gcc
-            ln -s /usr/bin/g++-10 /usr/bin/x86_64-linux-gnu-g++
+            ln -s -f /usr/bin/gcc-10 /usr/bin/gcc
+            ln -s -f /usr/bin/gcc-10 /usr/bin/cc
+            ln -s -f /usr/bin/g++-10 /usr/bin/g++
+            ln -s -f /usr/bin/g++-10 /usr/bin/c++
+            ln -s -f /usr/bin/gcc-10 /usr/bin/x86_64-linux-gnu-gcc
+            ln -s -f /usr/bin/g++-10 /usr/bin/x86_64-linux-gnu-g++
         else
             apt -y install gcc g++
         fi
@@ -955,7 +955,7 @@ cat > /etc/v2ray/config.json <<EOF
       "settings": {
         "auth": "noauth",
         "udp": false,
-        "userLevel": 999
+        "userLevel": 10
       },
       "streamSettings": {
         "network": "ws",
@@ -1040,6 +1040,27 @@ get_web()
         unzip -q -d /etc/nginx/html/$domain /etc/nginx/html/$domain/*.zip
         rm -rf /etc/nginx/html/$domain/*.zip
     fi
+}
+
+#使用vmess作为底层协议
+back_to_vmess()
+{
+    if_back_to_socks=""
+    while [ "$if_back_to_socks" != "y" -a "$if_back_to_socks" != "n" ]
+    do
+        tyblue "返回vmess作为底层协议?(y/n)"
+        read if_back_to_socks
+    done
+    if [ ! -e /etc/v2ray/config.json ] || [ ! -e /etc/nginx ] ; then
+        red "请先安装V2Ray-WebSocket(ws)+TLS(1.3)+Web！！"
+        exit 1;
+    fi
+    get_info
+    v2id=`cat /proc/sys/kernel/random/uuid`
+    config_v2ray_vmess
+    service v2ray restart
+    green "配置完成！！！"
+    green "新的用户id：$v2id"
 }
 
 #使用socks作为底层协议
@@ -1154,7 +1175,11 @@ start_menu()
     tyblue "5.重置域名和TLS配置"
     tyblue "  (会覆盖原有域名配置，配置过程中域名输错了造成V2Ray无法启动可以用此选项修复)"
     tyblue "6.添加域名(不同域名可以有不同的TLS配置)"
-    tyblue "7.使用socks(5)作为底层传输协议(降低计算量、延迟)(beta)"
+    if grep -q "id" /etc/v2ray/config.json >> /dev/null 2>&1 ; then
+        tyblue "7.使用socks(5)作为底层传输协议(降低计算量、延迟)(beta)"
+    else
+        tyblue "7.返回vmess作为底层传输协议"
+    fi
     tyblue "8.查看/修改用户ID(id)"
     tyblue "9.查看/修改路径(path)"
     tyblue "10.仅安装bbr(2)(plus)"
@@ -1186,6 +1211,7 @@ start_menu()
             start_menu
             ;;
         3)
+            if_remove=""
             while [ "$if_remove" != "y" -a "$if_remove" != "n" ]
             do
                 yellow "删除V2Ray-WebSocket(ws)+TLS(1.3)+Web?(y/n)"
@@ -1258,7 +1284,11 @@ start_menu()
             fi
             ;;
         7)
-            turn_to_socks
+            if ! grep -q "id" /etc/v2ray/config.json ; then
+                back_to_vmess
+            else
+                turn_to_socks
+            fi
             ;;
         8)
             if [ ! -e /etc/v2ray/config.json ] ; then
