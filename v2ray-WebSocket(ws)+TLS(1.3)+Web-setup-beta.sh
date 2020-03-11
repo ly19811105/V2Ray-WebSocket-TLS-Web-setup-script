@@ -1070,10 +1070,6 @@ back_to_vmess()
     if [ $if_back_to_vmess == "n" ]; then
         exit 0;
     fi
-    if [ ! -e /etc/v2ray/config.json ] || [ ! -e /etc/nginx ] ; then
-        red "请先安装V2Ray-WebSocket(ws)+TLS(1.3)+Web！！"
-        exit 1;
-    fi
     get_info
     v2id=`cat /proc/sys/kernel/random/uuid`
     config_v2ray_vmess
@@ -1095,10 +1091,6 @@ turn_to_socks()
     done
     if [ $if_turn_to_socks == "n" ]; then
         exit 0;
-    fi
-    if [ ! -e /etc/v2ray/config.json ] || [ ! -e /etc/nginx ] ; then
-        red "请先安装V2Ray-WebSocket(ws)+TLS(1.3)+Web！！"
-        exit 1;
     fi
     get_info
     config_v2ray_socks
@@ -1327,10 +1319,14 @@ start_menu()
             fi
             ;;
         7)
-            if ! grep -q "id" /etc/v2ray/config.json ; then
-                back_to_vmess
-            else
+            if [ ! -e /etc/v2ray/config.json ] || [ ! -e /etc/nginx ] ; then
+                red "请先安装V2Ray-WebSocket(ws)+TLS(1.3)+Web！！"
+                exit 1;
+            fi
+            if grep -q "id" /etc/v2ray/config.json ; then
                 turn_to_socks
+            else
+                back_to_vmess
             fi
             ;;
         8)
