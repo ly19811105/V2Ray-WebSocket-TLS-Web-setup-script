@@ -20,12 +20,21 @@ red()                              #姨妈红
 }
 
 
+#检查域名
+check_domain()
+{
+    local temp=${1%%.*}
+    if [ "$temp" == "www" ]; then
+        return 0;
+    else
+        return 1;
+    fi
+}
+
 #读取域名
 readDomain()
 {
-    echo
-    echo
-    echo
+    echo -e "\n\n\n"
     tyblue "**********************关于域名的说明**********************"
     tyblue "假设你的域名是abcd.com，则:"
     tyblue "一级域名为:abcd.com(主机记录为 @ )"
@@ -52,6 +61,11 @@ readDomain()
             echo
             tyblue "********************请输入一级域名(不带www.，http，:，/)********************"
             read -p "请输入域名：" domain
+            while check_domain $domain ;
+            do
+                red "域名前面不要带www！"
+                read -p "请输入域名：" domain
+            done
             ;;
         2)
             echo
@@ -65,9 +79,7 @@ readDomain()
 #选择tls配置
 readTlsConfig()
 {
-    echo
-    echo
-    echo
+    echo -e "\n\n\n"
     tyblue "****************************************************************"
     tyblue "                     速度                        抗封锁性"
     tyblue "TLS1.2+1.3：  ++++++++++++++++++++          ++++++++++++++++++++"
@@ -364,9 +376,7 @@ EOF
 #升级系统
 updateSystem()
 {
-    echo
-    echo
-    echo
+    echo -e "\n\n\n"
     tyblue "********************请选择升级系统版本********************"
     tyblue "1.最新beta版(现在是20.04)(2020.03)"
     tyblue "2.最新稳定版(现在是19.10)(2020.03)"
@@ -406,8 +416,6 @@ updateSystem()
             do-release-upgrade
             sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
             do-release-upgrade -d
-            do-release-upgrade -d
-            do-release-upgrade
             do-release-upgrade
             ;;
         2)
@@ -430,9 +438,7 @@ updateSystem()
 doupdate()
 {
     systemVersion=`lsb_release -r --short`
-    echo
-    echo
-    echo
+    echo -e "\n\n\n"
     tyblue "*******************是否将更新系统组件？*******************"
     green  "1.更新已安装软件，并升级系统(仅对ubuntu有效)"
     green  "2.仅更新已安装软件"
@@ -541,7 +547,7 @@ install_bbr()
     else
         last_v=${last_v%%-*}
     fi
-    clear
+    echo -e "\n\n\n"
     tyblue "******************请选择要使用的bbr版本******************"
     green  "1.升级最新版内核并启用bbr(推荐)"
     tyblue "2.启用bbr(如果内核不支持，将自动升级内核)"
@@ -732,8 +738,10 @@ get_certs()
     case "$domainconfig" in
         1)
             ~/.acme.sh/acme.sh --issue -d $domain -d www.$domain --webroot /etc/nginx/html -k ec-256 --ocsp
+            ~/.acme.sh/acme.sh --issue -d $domain -d www.$domain --webroot /etc/nginx/html -k ec-256 --ocsp
             ;;
         2)
+            ~/.acme.sh/acme.sh --issue -d $domain --webroot /etc/nginx/html -k ec-256 --ocsp
             ~/.acme.sh/acme.sh --issue -d $domain --webroot /etc/nginx/html -k ec-256 --ocsp
             ;;
     esac
@@ -744,9 +752,7 @@ get_certs()
 #关于网站伪装的信息收集
 web_pretend()
 {
-    echo
-    echo
-    echo
+    echo -e "\n\n\n"
     tyblue "******************************请选择要伪装的网站页面******************************"
     tyblue "1.404页面 (模拟网站后台)"
     green  "说明：大型网站几乎都有使用网站后台，比如bilibili的每个视频都是由"
@@ -796,12 +802,12 @@ install_v2ray_ws_tls()
             apt -y purge gcc g++ gcc-9 g++-9 gcc-8 g++-8 gcc-7 g++-7
             apt autopurge -y
             apt -y install gcc-10 g++-10
-            ln -s /usr/bin/gcc-10 /usr/bin/gcc
-            ln -s /usr/bin/gcc-10 /usr/bin/cc
-            ln -s /usr/bin/g++-10 /usr/bin/g++
-            ln -s /usr/bin/g++-10 /usr/bin/c++
-            ln -s /usr/bin/gcc-10 /usr/bin/x86_64-linux-gnu-gcc
-            ln -s /usr/bin/g++-10 /usr/bin/x86_64-linux-gnu-g++
+            ln -s -f /usr/bin/gcc-10 /usr/bin/gcc
+            ln -s -f /usr/bin/gcc-10 /usr/bin/cc
+            ln -s -f /usr/bin/g++-10 /usr/bin/g++
+            ln -s -f /usr/bin/g++-10 /usr/bin/c++
+            ln -s -f /usr/bin/gcc-10 /usr/bin/x86_64-linux-gnu-gcc
+            ln -s -f /usr/bin/g++-10 /usr/bin/x86_64-linux-gnu-g++
         else
             apt -y install gcc g++
         fi
@@ -871,9 +877,7 @@ install_v2ray_ws_tls()
     /etc/nginx/sbin/nginx
     curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1   #激活tcp_fast_open
     curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1
-    echo
-    echo
-    echo
+    echo -e "\n\n\n"
     tyblue "*************安装完成*************"
     if [ $domainconfig -eq 1  ]; then
         tyblue "地址：www.${domain}或${domain}"
@@ -955,7 +959,7 @@ cat > /etc/v2ray/config.json <<EOF
       "settings": {
         "auth": "noauth",
         "udp": false,
-        "userLevel": 999
+        "userLevel": 10
       },
       "streamSettings": {
         "network": "ws",
@@ -1042,6 +1046,26 @@ get_web()
     fi
 }
 
+#使用vmess作为底层协议
+back_to_vmess()
+{
+    if_back_to_vmess=""
+    while [ "$if_back_to_vmess" != "y" -a "$if_back_to_vmess" != "n" ]
+    do
+        tyblue "返回vmess作为底层协议?(y/n)"
+        read if_back_to_vmess
+    done
+    if [ $if_back_to_vmess == "n" ]; then
+        exit 0;
+    fi
+    get_info
+    v2id=`cat /proc/sys/kernel/random/uuid`
+    config_v2ray_vmess
+    service v2ray restart
+    green "配置完成！！！"
+    green "用户ID：$v2id"
+}
+
 #使用socks作为底层协议
 turn_to_socks()
 {
@@ -1055,10 +1079,6 @@ turn_to_socks()
     done
     if [ $if_turn_to_socks == "n" ]; then
         exit 0;
-    fi
-    if [ ! -e /etc/v2ray/config.json ] || [ ! -e /etc/nginx ] ; then
-        red "请先安装V2Ray-WebSocket(ws)+TLS(1.3)+Web！！"
-        exit 1;
     fi
     get_info
     config_v2ray_socks
@@ -1146,15 +1166,18 @@ start_menu()
     yellow "若退格键异常可以选择选项2修复"
     green  "***************************************************************************"
     echo
-    green  "1.安装V2Ray-WebSocket(ws)+TLS(1.3)+Web"
-    green  "  (内含bbr安装选项/支持覆盖安装、升级，如要升级，先下载最新脚本再安装)"
+    green  "1.安装/覆盖安装/升级V2Ray-WebSocket+TLS+Web(内含bbr安装选项)"
     tyblue "2.尝试修复退格键无法使用的问题"
-    red    "3.删除V2Ray-WebSocket(ws)+TLS(1.3)+Web"
-    tyblue "4.重启/启动V2Ray-WebSocket(ws)+TLS(1.3)+Web服务(对于玄学断连/掉速有奇效)"
+    red    "3.删除V2Ray-WebSocket+TLS+Web"
+    tyblue "4.重启/启动V2Ray-WebSocket+TLS+Web服务(对于玄学断连/掉速有奇效)"
     tyblue "5.重置域名和TLS配置"
     tyblue "  (会覆盖原有域名配置，配置过程中域名输错了造成V2Ray无法启动可以用此选项修复)"
     tyblue "6.添加域名(不同域名可以有不同的TLS配置)"
-    tyblue "7.使用socks(5)作为底层传输协议(降低计算量、延迟)(beta)"
+    if [ ! -e /etc/v2ray/config.json ] || grep -q "id" /etc/v2ray/config.json >> /dev/null 2>&1 ; then
+        tyblue "7.使用socks(5)作为底层传输协议(降低计算量、延迟)(beta)"
+    else
+        tyblue "7.返回vmess作为底层传输协议"
+    fi
     tyblue "8.查看/修改用户ID(id)"
     tyblue "9.查看/修改路径(path)"
     tyblue "10.仅安装bbr(2)(plus)"
@@ -1162,13 +1185,38 @@ start_menu()
     tyblue "12.仅升级V2Ray"
     yellow "13.退出脚本"
     echo
-    menu="3345"
+    menu=""
     while [ "$menu" != "1" -a "$menu" != "2" -a "$menu" != "3" -a "$menu" != "4" -a "$menu" != "5" -a "$menu" != "6" -a "$menu" != "7" -a "$menu" != "8" -a "$menu" != "9" -a "$menu" != "10" -a "$menu" != "11" -a "$menu" != "12" -a "$menu" != "13" ]
     do
         read -p "您的选择是：" menu
     done
     case "$menu" in
         1)
+            if [ -e /etc/v2ray/config.json ] && [ -e /etc/nginx ] ; then
+                green  "***********检测到已安装V2Ray-WebSocket+TLS+Web***********"
+                yellow "此选项将会删除现有V2Ray-WebSocket+TLS+Web并重新安装\n"
+                tyblue "您可能有以下需求："
+                green  "1.安装完成后，无法连接，尝试重新安装"
+                tyblue "  请尝试检查服务器防火墙443端口、80端口是否打开"
+                tyblue "  选择选项5.重置域名和TLS配置尝试修复"
+                tyblue "  以上两步都做了，仍然无法修复，可以重新安装\n"
+                green  "2.更新V2Ray-WebSocket+TLS+Web"
+                tyblue "  请删除现有脚本，获取最新脚本，再安装\n"
+                green  "3.安装的时候域名写错了，导致安装完成后无法连接"
+                tyblue "  请选择选项5.重置域名和TLS配置修复\n"
+                green  "4.安装到一半与ssh断开连接(断网了)"
+                tyblue "  如果是在更新系统/软件包的时候断开连接，建议重置系统"
+                tyblue "  其他情况可以重新安装\n"
+                if_continue=""
+                while [ "$if_continue" != "y" -a "$if_continue" != "n" ]
+                do
+                    tyblue "是否继续?(y/n)"
+                    read if_continue
+                done
+                if [ "$if_continue" == "n" ]; then
+                    exit 0
+                fi
+            fi
             install_v2ray_ws_tls
             ;;
         2)
@@ -1186,6 +1234,7 @@ start_menu()
             start_menu
             ;;
         3)
+            if_remove=""
             while [ "$if_remove" != "y" -a "$if_remove" != "n" ]
             do
                 yellow "删除V2Ray-WebSocket(ws)+TLS(1.3)+Web?(y/n)"
@@ -1258,7 +1307,15 @@ start_menu()
             fi
             ;;
         7)
-            turn_to_socks
+            if [ ! -e /etc/v2ray/config.json ] || [ ! -e /etc/nginx ] ; then
+                red "请先安装V2Ray-WebSocket(ws)+TLS(1.3)+Web！！"
+                exit 1;
+            fi
+            if grep -q "id" /etc/v2ray/config.json ; then
+                turn_to_socks
+            else
+                back_to_vmess
+            fi
             ;;
         8)
             if [ ! -e /etc/v2ray/config.json ] ; then
