@@ -34,9 +34,7 @@ check_domain()
 #读取域名
 readDomain()
 {
-    echo
-    echo
-    echo
+    echo -e "\n\n\n"
     tyblue "**********************关于域名的说明**********************"
     tyblue "假设你的域名是abcd.com，则:"
     tyblue "一级域名为:abcd.com(主机记录为 @ )"
@@ -81,9 +79,7 @@ readDomain()
 #选择tls配置
 readTlsConfig()
 {
-    echo
-    echo
-    echo
+    echo -e "\n\n\n"
     tyblue "****************************************************************"
     tyblue "                     速度                        抗封锁性"
     tyblue "TLS1.2+1.3：  ++++++++++++++++++++          ++++++++++++++++++++"
@@ -381,9 +377,7 @@ EOF
 updateSystem()
 {
     systemVersion=`lsb_release -r --short`
-    echo
-    echo
-    echo
+    echo -e "\n\n\n"
     tyblue "********************请选择升级系统版本********************"
     tyblue "1.最新beta版(现在是20.04)(2020.03)"
     tyblue "2.最新稳定版(现在是19.10)(2020.03)"
@@ -444,9 +438,7 @@ updateSystem()
 #升级系统组件
 doupdate()
 {
-    echo
-    echo
-    echo
+    echo -e "\n\n\n"
     tyblue "*******************是否将更新系统组件？*******************"
     green  "1.更新已安装软件，并升级系统(仅对ubuntu有效)"
     green  "2.仅更新已安装软件"
@@ -760,9 +752,7 @@ get_certs()
 #关于网站伪装的信息收集
 web_pretend()
 {
-    echo
-    echo
-    echo
+    echo -e "\n\n\n"
     tyblue "******************************请选择要伪装的网站页面******************************"
     tyblue "1.404页面 (模拟网站后台)"
     green  "说明：大型网站几乎都有使用网站后台，比如bilibili的每个视频都是由"
@@ -887,9 +877,7 @@ install_v2ray_ws_tls()
     /etc/nginx/sbin/nginx
     curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1   #激活tcp_fast_open
     curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1
-    echo
-    echo
-    echo
+    echo -e "\n\n\n"
     tyblue "*************安装完成*************"
     if [ $domainconfig -eq 1  ]; then
         tyblue "地址：www.${domain}或${domain}"
