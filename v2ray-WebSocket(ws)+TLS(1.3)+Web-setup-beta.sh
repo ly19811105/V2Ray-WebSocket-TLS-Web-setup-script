@@ -376,7 +376,6 @@ EOF
 #升级系统
 updateSystem()
 {
-    systemVersion=`lsb_release -r --short`
     echo -e "\n\n\n"
     tyblue "********************请选择升级系统版本********************"
     tyblue "1.最新beta版(现在是20.04)(2020.03)"
@@ -438,6 +437,7 @@ updateSystem()
 #升级系统组件
 doupdate()
 {
+    systemVersion=`lsb_release -r --short`
     echo -e "\n\n\n"
     tyblue "*******************是否将更新系统组件？*******************"
     green  "1.更新已安装软件，并升级系统(仅对ubuntu有效)"
