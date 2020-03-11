@@ -20,6 +20,17 @@ red()                              #姨妈红
 }
 
 
+#检查域名
+check_domain()
+{
+    local temp=${1%%.*}
+    if [ "$temp" == "www" ]; then
+        return 0;
+    else
+        return 1;
+    fi
+}
+
 #读取域名
 readDomain()
 {
@@ -52,6 +63,11 @@ readDomain()
             echo
             tyblue "********************请输入一级域名(不带www.，http，:，/)********************"
             read -p "请输入域名：" domain
+            while check_domain $domain ;
+            do
+                red "域名前面不要带www！"
+                read -p "请输入域名：" domain
+            done
             ;;
         2)
             echo
@@ -1170,15 +1186,14 @@ start_menu()
     yellow "若退格键异常可以选择选项2修复"
     green  "***************************************************************************"
     echo
-    green  "1.安装V2Ray-WebSocket(ws)+TLS(1.3)+Web"
-    green  "  (内含bbr安装选项/支持覆盖安装、升级，如要升级，先下载最新脚本再安装)"
+    green  "1.安装/覆盖安装/升级V2Ray-WebSocket+TLS+Web(内含bbr安装选项)"
     tyblue "2.尝试修复退格键无法使用的问题"
-    red    "3.删除V2Ray-WebSocket(ws)+TLS(1.3)+Web"
-    tyblue "4.重启/启动V2Ray-WebSocket(ws)+TLS(1.3)+Web服务(对于玄学断连/掉速有奇效)"
+    red    "3.删除V2Ray-WebSocket+TLS+Web"
+    tyblue "4.重启/启动V2Ray-WebSocket+TLS+Web服务(对于玄学断连/掉速有奇效)"
     tyblue "5.重置域名和TLS配置"
     tyblue "  (会覆盖原有域名配置，配置过程中域名输错了造成V2Ray无法启动可以用此选项修复)"
     tyblue "6.添加域名(不同域名可以有不同的TLS配置)"
-    if grep -q "id" /etc/v2ray/config.json >> /dev/null 2>&1 ; then
+    if [ ! -e /etc/v2ray/config.json ] || grep -q "id" /etc/v2ray/config.json >> /dev/null 2>&1 ; then
         tyblue "7.使用socks(5)作为底层传输协议(降低计算量、延迟)(beta)"
     else
         tyblue "7.返回vmess作为底层传输协议"
@@ -1197,6 +1212,30 @@ start_menu()
     done
     case "$menu" in
         1)
+            if [ -e /etc/v2ray/config.json ] && [ -e /etc/nginx ] ; then
+                tyblue "检测到已安装V2Ray-WebSocket+TLS+Web"
+                tyblue "此选项将会删除现有V2Ray-WebSocket+TLS+Web并重新安装"
+                tyblue "您可能有以下需求："
+                yellow "1.安装完成后，无法连接，尝试重新安装\n"
+                tyblue "  请尝试检查服务器防火墙443端口、80端口是否打开"
+                tyblue "  选择选项5.重置域名和TLS配置尝试修复\n"
+                yellow "2.更新V2Ray-WebSocket+TLS+Web\n"
+                tyblue "  请删除现有脚本，获取最新脚本，再安装\n"
+                yellow "3.安装的时候域名写错了，导致安装完成后无法连接\n"
+                tyblue "  请选择选项5.重置域名和TLS配置修复\n"
+                yellow "4.安装到一半与ssh断开连接(断网了)\n"
+                tyblue "  如果是在更新系统/软件包的时候断开连接，建议重置系统"
+                tyblue "  其他情况可以重新安装\n"
+            fi
+            if_continue=""
+            while [ "$if_continue" != "y" -a "$if_continue" != "n" ]
+            do
+                yellow "是否继续?(y/n)"
+                read if_continue
+            done
+            if [ "$if_continue" == "n" ]; then
+                exit 0
+            fi
             install_v2ray_ws_tls
             ;;
         2)
