@@ -364,7 +364,6 @@ EOF
 #升级系统
 updateSystem()
 {
-    systemVersion=`lsb_release -r --short`
     echo
     echo
     echo
@@ -430,6 +429,7 @@ updateSystem()
 #升级系统组件
 doupdate()
 {
+    systemVersion=`lsb_release -r --short`
     echo
     echo
     echo
