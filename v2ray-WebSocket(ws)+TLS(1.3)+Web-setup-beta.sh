@@ -1213,28 +1213,28 @@ start_menu()
     case "$menu" in
         1)
             if [ -e /etc/v2ray/config.json ] && [ -e /etc/nginx ] ; then
-                tyblue "检测到已安装V2Ray-WebSocket+TLS+Web"
-                tyblue "此选项将会删除现有V2Ray-WebSocket+TLS+Web并重新安装"
-                tyblue "您可能有以下需求："
-                yellow "1.安装完成后，无法连接，尝试重新安装\n"
+                green  "***********检测到已安装V2Ray-WebSocket+TLS+Web***********"
+                yellow "此选项将会删除现有V2Ray-WebSocket+TLS+Web并重新安装"
+                tyblue "您可能有以下需求：\n"
+                green  "1.安装完成后，无法连接，尝试重新安装"
                 tyblue "  请尝试检查服务器防火墙443端口、80端口是否打开"
                 tyblue "  选择选项5.重置域名和TLS配置尝试修复\n"
-                yellow "2.更新V2Ray-WebSocket+TLS+Web\n"
+                green  "2.更新V2Ray-WebSocket+TLS+Web"
                 tyblue "  请删除现有脚本，获取最新脚本，再安装\n"
-                yellow "3.安装的时候域名写错了，导致安装完成后无法连接\n"
+                green  "3.安装的时候域名写错了，导致安装完成后无法连接"
                 tyblue "  请选择选项5.重置域名和TLS配置修复\n"
-                yellow "4.安装到一半与ssh断开连接(断网了)\n"
+                green  "4.安装到一半与ssh断开连接(断网了)"
                 tyblue "  如果是在更新系统/软件包的时候断开连接，建议重置系统"
                 tyblue "  其他情况可以重新安装\n"
-            fi
-            if_continue=""
-            while [ "$if_continue" != "y" -a "$if_continue" != "n" ]
-            do
-                yellow "是否继续?(y/n)"
-                read if_continue
-            done
-            if [ "$if_continue" == "n" ]; then
-                exit 0
+                if_continue=""
+                while [ "$if_continue" != "y" -a "$if_continue" != "n" ]
+                do
+                    tyblue "是否继续?(y/n)"
+                    read if_continue
+                done
+                if [ "$if_continue" == "n" ]; then
+                    exit 0
+                fi
             fi
             install_v2ray_ws_tls
             ;;
