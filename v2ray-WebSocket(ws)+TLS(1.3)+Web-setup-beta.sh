@@ -555,7 +555,7 @@ install_bbr()
     else
         last_v=${last_v%%-*}
     fi
-    clear
+    echo -e "\n\n\n"
     tyblue "******************请选择要使用的bbr版本******************"
     green  "1.升级最新版内核并启用bbr(推荐)"
     tyblue "2.启用bbr(如果内核不支持，将自动升级内核)"
@@ -809,7 +809,7 @@ install_v2ray_ws_tls()
     yum install -y gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl                   ##libxml2-devel非必须
     if cat /etc/issue | grep -qi "ubuntu" || cat /proc/version | grep -qi "ubuntu" ; then
         if version_ge $systemVersion 20.04 ; then
-            apt -y purge gcc g++ gcc-9 gcc-9-base gcc-8-base gcc-7-base g++-9 gcc-8 g++-8 gcc-7 g++-7
+            apt -y purge gcc g++ gcc-9 g++-9 gcc-8 g++-8 gcc-7 g++-7
             apt autopurge -y
             apt -y install gcc-10 g++-10
             ln -s -f /usr/bin/gcc-10 /usr/bin/gcc
