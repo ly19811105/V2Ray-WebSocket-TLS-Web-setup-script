@@ -125,6 +125,41 @@ version_ge(){
     test "$(echo "$@" | tr " " "\n" | sort -rV | head -n 1)" == "$1"
 }
 
+failed_version()
+{
+    if [[ `getconf WORD_BIT` == "32" && `getconf LONG_BIT` == "64" ]]; then
+        deb_name=$(wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/v${1}/ | grep "linux-image" | grep "generic" | awk -F'\">' '/amd64.deb/{print $2}' | cut -d'<' -f1 | head -1)
+    else
+        deb_name=$(wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/v${1}/ | grep "linux-image" | grep "generic" | awk -F'\">' '/i386.deb/{print $2}' | cut -d'<' -f1 | head -1)
+    fi
+    if [ -z ${deb_name} ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+last_version()
+{
+    if ! [[ $kernel =~ "rc" ]] ; then
+        echo "脚本出错！！"
+        exit 1
+    fi
+    rc_version=${kernel#*-rc}
+    kernel=$kernel2
+    if [ "$rc_version" == "1" ]; then
+        kernel_wei=${kernel##*.}
+        kernel=${kernel%.*}
+        ((kernel_wei--))
+        if [ "$kernel_wei" != "0" ]; then
+            kernel="$kernel.$kernel_wei"
+        fi
+    else
+        ((rc_version--))
+        kernel="$kernel-rc$rc_version"
+    fi
+}
+
 get_latest_version() {
     latest_version=$(wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/ | awk -F'\"v' '/v[0-9]/{print $2}' | cut -d '"' -f1 | cut -d '/' -f1 | sort -rV)
     kernel=$(echo $latest_version | cut -d ' ' -f 1)
@@ -134,6 +169,10 @@ get_latest_version() {
             kernel=$kernel2
         fi
     fi
+    while failed_version $kernel ;
+    do
+        last_version
+    done
     echo "latest_kernel_version=$kernel"
     #[ ${#latest_version[@]} -eq 0 ] && echo -e "${red}Error:${plain} Get latest kernel version failed." && exit 1
 
