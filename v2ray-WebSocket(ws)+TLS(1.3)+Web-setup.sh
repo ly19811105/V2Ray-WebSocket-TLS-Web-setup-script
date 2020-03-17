@@ -796,7 +796,7 @@ install_v2ray_ws_tls()
     readDomain                                                                                      #读取域名
     readTlsConfig
     web_pretend
-    yum install -y gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl                   ##libxml2-devel非必须
+    yum install -y gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make                   ##libxml2-devel非必须
     if cat /etc/issue | grep -qi "ubuntu" || cat /proc/version | grep -qi "ubuntu" ; then
         if version_ge $systemVersion 20.04 ; then
             apt -y purge gcc g++ gcc-9 g++-9 gcc-8 g++-8 gcc-7 g++-7
@@ -814,7 +814,7 @@ install_v2ray_ws_tls()
     else
         apt -y install gcc g++
     fi
-    apt install -y libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl                                          ##libxml2-dev非必须
+    apt install -y libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make                                          ##libxml2-dev非必须
     apt autopurge -y
     apt autoremove -y
     yum autoremove -y
