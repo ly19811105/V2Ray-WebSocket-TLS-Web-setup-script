@@ -476,8 +476,8 @@ doupdate()
 uninstall_firewall()
 {
     ufw disable
-    apt purge iptables -y
-    chkconfig iptables off
+    #apt purge iptables -y
+    #chkconfig iptables off
     systemctl disable firewalld
     yum remove firewalld -y
     rm -rf /usr/local/aegis
