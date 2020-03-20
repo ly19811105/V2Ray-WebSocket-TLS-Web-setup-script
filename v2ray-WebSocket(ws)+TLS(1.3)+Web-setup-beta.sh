@@ -1167,7 +1167,7 @@ start_menu()
     yellow "若退格键异常可以选择选项2修复"
     green  "***************************************************************************"
     echo
-    green  "1.安装/覆盖安装/升级V2Ray-WebSocket+TLS+Web(内含bbr安装选项)"
+    green  "1.安装/覆盖安装/升级V2Ray-WebSocket+TLS+Web(内含 多版本bbr/锐速 安装选项)"
     tyblue "2.尝试修复退格键无法使用的问题"
     red    "3.删除V2Ray-WebSocket+TLS+Web"
     tyblue "4.重启/启动V2Ray-WebSocket+TLS+Web服务(对于玄学断连/掉速有奇效)"
