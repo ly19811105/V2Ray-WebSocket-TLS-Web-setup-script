@@ -476,8 +476,9 @@ doupdate()
 uninstall_firewall()
 {
     ufw disable
-    apt purge iptables -y
-    chkconfig iptables off
+    #apt purge iptables -y
+    apt purge firewalld -y
+    #chkconfig iptables off
     systemctl disable firewalld
     yum remove firewalld -y
     rm -rf /usr/local/aegis
@@ -553,7 +554,7 @@ install_bbr()
     tyblue "2.启用bbr(如果内核不支持，将自动升级内核)"
     yellow "3.启用bbr2(需安装第三方内核)(Ubuntu、Debian)"
     yellow "4.启用bbr2(需安装第三方内核)(Centos)"
-    yellow "5.启用bbrplus/魔改版bbr(需安装第三方内核)"
+    yellow "5.启用bbrplus/魔改版bbr/锐速(需安装第三方内核)"
     tyblue "6.退出bbr安装"
     tyblue "******************关于安装bbr加速的说明******************"
     yellow "bbr加速可以大幅提升网络速度，建议安装"
@@ -796,7 +797,7 @@ install_v2ray_ws_tls()
     readDomain                                                                                      #读取域名
     readTlsConfig
     web_pretend
-    yum install -y gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl                   ##libxml2-devel非必须
+    yum install -y gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make                   ##libxml2-devel非必须
     if cat /etc/issue | grep -qi "ubuntu" || cat /proc/version | grep -qi "ubuntu" ; then
         if version_ge $systemVersion 20.04 ; then
             apt -y purge gcc g++ gcc-9 g++-9 gcc-8 g++-8 gcc-7 g++-7
@@ -814,7 +815,7 @@ install_v2ray_ws_tls()
     else
         apt -y install gcc g++
     fi
-    apt install -y libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl                                          ##libxml2-dev非必须
+    apt install -y libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make                                          ##libxml2-dev非必须
     apt autopurge -y
     apt autoremove -y
     yum autoremove -y
@@ -824,16 +825,16 @@ install_v2ray_ws_tls()
 
 ##安装nginx
     rm -rf nginx-1.17.9.tar.gz
-    rm -rf openssl-1.1.1d.tar.gz
-    rm -rf openssl-1.1.1d
+    rm -rf openssl-1.1.1e.tar.gz
+    rm -rf openssl-1.1.1e
     rm -rf nginx-1.17.9
-    if ! wget https://www.openssl.org/source/openssl-1.1.1d.tar.gz ; then
+    if ! wget https://www.openssl.org/source/openssl-1.1.1e.tar.gz ; then
         red    "获取openssl失败"
         red    "你的服务器貌似没有联网呢"
         yellow "按回车键继续或者按ctrl+c终止"
         read rubbish
     fi
-    tar -zxf openssl-1.1.1d.tar.gz
+    tar -zxf openssl-1.1.1e.tar.gz
     wget https://nginx.org/download/nginx-1.17.9.tar.gz
     tar -zxf nginx-1.17.9.tar.gz
     cd nginx-1.17.9
@@ -847,8 +848,8 @@ install_v2ray_ws_tls()
     mkdir /etc/nginx/conf.d
     cd ..
     rm -rf nginx-1.17.9.tar.gz
-    rm -rf openssl-1.1.1d.tar.gz
-    rm -rf openssl-1.1.1d
+    rm -rf openssl-1.1.1e.tar.gz
+    rm -rf openssl-1.1.1e
     rm -rf nginx-1.17.9
 ##安装nignx完成
 
@@ -1151,7 +1152,7 @@ start_menu()
     clear
     green  "************* V2Ray  WebSocket(ws)+TLS(1.3)+Web  搭建/管理脚本*************"
     tyblue "脚本特性："
-    tyblue "1.集成多版本bbr安装选项"
+    tyblue "1.集成 多版本bbr/锐速 安装选项"
     tyblue "2.支持多种系统(Ubuntu Centos Debian ...)"
     tyblue "3.集成TLS配置多版本安装选项"
     tyblue "4.集成删除防火墙、阿里云盾功能"
@@ -1180,7 +1181,7 @@ start_menu()
     fi
     tyblue "8.查看/修改用户ID(id)"
     tyblue "9.查看/修改路径(path)"
-    tyblue "10.仅安装bbr(2)(plus)"
+    tyblue "10.仅安装加速(包含bbr/bbr2/bbrplus/魔改版bbr/锐速)"
     tyblue "11.修改dns"
     tyblue "12.仅升级V2Ray"
     yellow "13.退出脚本"
