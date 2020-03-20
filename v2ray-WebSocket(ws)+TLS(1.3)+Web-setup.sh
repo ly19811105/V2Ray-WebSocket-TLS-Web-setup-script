@@ -1,5 +1,6 @@
 #!/bin/bash
-
+nginx_version=nginx-1.17.9
+openssl_version=openssl-1.1.1e
 
 #定义几个颜色
 tyblue()                           #天依蓝
@@ -97,6 +98,15 @@ readTlsConfig()
     done
 }
 
+#读取当前的tls配置
+readTlsConfig2()
+{
+    if grep -m 1 "ssl_protocols" /etc/nginx/conf.d/v2ray.conf | grep -q "TLSv1.2" ; then
+        tlsVersion=1
+    else
+        tlsVersion=2
+    fi
+}
 
 #配置nginx(部分)
 configtls_part()
@@ -477,6 +487,7 @@ uninstall_firewall()
 {
     ufw disable
     #apt purge iptables -y
+    apt purge firewalld -y
     #chkconfig iptables off
     systemctl disable firewalld
     yum remove firewalld -y
@@ -553,12 +564,12 @@ install_bbr()
     tyblue "2.启用bbr(如果内核不支持，将自动升级内核)"
     yellow "3.启用bbr2(需安装第三方内核)(Ubuntu、Debian)"
     yellow "4.启用bbr2(需安装第三方内核)(Centos)"
-    yellow "5.启用bbrplus/魔改版bbr(需安装第三方内核)"
+    yellow "5.启用bbrplus/魔改版bbr/锐速(需安装第三方内核)"
     tyblue "6.退出bbr安装"
     tyblue "******************关于安装bbr加速的说明******************"
-    yellow "bbr加速可以大幅提升网络速度，建议安装"
-    tyblue "新版本内核的bbr比旧版强得多，最新版本内核的bbr强于bbrplus"
-    yellow "安装第三方内核可能造成各种系统不稳定，甚至无法开机"
+    green  "bbr加速可以大幅提升网络速度，建议安装"
+    green  "新版本内核的bbr比旧版强得多，最新版本内核的bbr强于bbrplus等"
+    yellow "安装第三方内核可能造成系统不稳定，甚至无法开机"
     yellow "安装内核需重启才能生效"
     yellow "重启后，请再次运行此脚本完成剩余安装"
     tyblue "*********************************************************"
@@ -823,21 +834,21 @@ install_v2ray_ws_tls()
 
 
 ##安装nginx
-    rm -rf nginx-1.17.9.tar.gz
-    rm -rf openssl-1.1.1d.tar.gz
-    rm -rf openssl-1.1.1d
-    rm -rf nginx-1.17.9
-    if ! wget https://www.openssl.org/source/openssl-1.1.1d.tar.gz ; then
+    rm -rf ${nginx_version}.tar.gz
+    rm -rf ${openssl_version}.tar.gz
+    rm -rf $openssl_version
+    rm -rf ${nginx_version}
+    if ! wget https://www.openssl.org/source/${openssl_version}.tar.gz ; then
         red    "获取openssl失败"
         red    "你的服务器貌似没有联网呢"
         yellow "按回车键继续或者按ctrl+c终止"
         read rubbish
     fi
-    tar -zxf openssl-1.1.1d.tar.gz
-    wget https://nginx.org/download/nginx-1.17.9.tar.gz
-    tar -zxf nginx-1.17.9.tar.gz
-    cd nginx-1.17.9
-    ./configure --prefix=/etc/nginx --with-openssl=../openssl-1.1.1d --with-openssl-opt="enable-tls1_3 enable-tls1_2 enable-tls1 enable-ssl enable-ssl2 enable-ssl3 enable-ec_nistp_64_gcc_128 shared threads zlib-dynamic sctp" --with-mail=dynamic --with-mail_ssl_module --with-stream=dynamic --with-stream_ssl_module --with-stream_realip_module --with-stream_geoip_module=dynamic --with-stream_ssl_preread_module --with-http_ssl_module --with-http_v2_module --with-http_realip_module --with-http_addition_module --with-http_xslt_module=dynamic --with-http_image_filter_module=dynamic --with-http_geoip_module=dynamic --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_slice_module --with-http_stub_status_module --with-http_perl_module=dynamic --with-pcre --with-libatomic --with-compat --with-cpp_test_module --with-google_perftools_module --with-file-aio --with-threads --with-poll_module --with-select_module --with-cc='cc -O3' --with-cc-opt=-O3
+    tar -zxf ${openssl_version}.tar.gz
+    wget https://nginx.org/download/${nginx_version}.tar.gz
+    tar -zxf ${nginx_version}.tar.gz
+    cd ${nginx_version}
+    ./configure --prefix=/etc/nginx --with-openssl=../$openssl_version --with-openssl-opt="enable-tls1_3 enable-tls1_2 enable-tls1 enable-ssl enable-ssl2 enable-ssl3 enable-ec_nistp_64_gcc_128 shared threads zlib-dynamic sctp" --with-mail=dynamic --with-mail_ssl_module --with-stream=dynamic --with-stream_ssl_module --with-stream_realip_module --with-stream_geoip_module=dynamic --with-stream_ssl_preread_module --with-http_ssl_module --with-http_v2_module --with-http_realip_module --with-http_addition_module --with-http_xslt_module=dynamic --with-http_image_filter_module=dynamic --with-http_geoip_module=dynamic --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_slice_module --with-http_stub_status_module --with-http_perl_module=dynamic --with-pcre --with-libatomic --with-compat --with-cpp_test_module --with-google_perftools_module --with-file-aio --with-threads --with-poll_module --with-select_module --with-cc='cc -O3' --with-cc-opt=-O3
     sed -i 's# -g # #' objs/Makefile                                                  ##关闭调试
     sed -i 's#CFLAGS="\$CFLAGS -g"#CFLAGS="\$CFLAGS"#' auto/cc/*                      ##关闭调试
     sed -i 's#CFLAGS="\$CFLAGS -g #CFLAGS="\$CFLAGS #' auto/cc/*                      ##关闭调试
@@ -846,10 +857,10 @@ install_v2ray_ws_tls()
     mkdir /etc/nginx/certs
     mkdir /etc/nginx/conf.d
     cd ..
-    rm -rf nginx-1.17.9.tar.gz
-    rm -rf openssl-1.1.1d.tar.gz
-    rm -rf openssl-1.1.1d
-    rm -rf nginx-1.17.9
+    rm -rf ${nginx_version}.tar.gz
+    rm -rf ${openssl_version}.tar.gz
+    rm -rf $openssl_version
+    rm -rf ${nginx_version}
 ##安装nignx完成
 
 
@@ -1151,7 +1162,7 @@ start_menu()
     clear
     green  "************* V2Ray  WebSocket(ws)+TLS(1.3)+Web  搭建/管理脚本*************"
     tyblue "脚本特性："
-    tyblue "1.集成多版本bbr安装选项"
+    tyblue "1.集成 多版本bbr/锐速 安装选项"
     tyblue "2.支持多种系统(Ubuntu Centos Debian ...)"
     tyblue "3.集成TLS配置多版本安装选项"
     tyblue "4.集成删除防火墙、阿里云盾功能"
@@ -1172,7 +1183,7 @@ start_menu()
     tyblue "4.重启/启动V2Ray-WebSocket+TLS+Web服务(对于玄学断连/掉速有奇效)"
     tyblue "5.重置域名和TLS配置"
     tyblue "  (会覆盖原有域名配置，配置过程中域名输错了造成V2Ray无法启动可以用此选项修复)"
-    tyblue "6.添加域名(不同域名可以有不同的TLS配置)"
+    tyblue "6.添加域名"
     if [ ! -e /etc/v2ray/config.json ] || grep -q "id" /etc/v2ray/config.json >> /dev/null 2>&1 ; then
         tyblue "7.使用socks(5)作为底层传输协议(降低计算量、延迟)(beta)"
     else
@@ -1180,7 +1191,7 @@ start_menu()
     fi
     tyblue "8.查看/修改用户ID(id)"
     tyblue "9.查看/修改路径(path)"
-    tyblue "10.仅安装bbr(2)(plus)"
+    tyblue "10.仅安装bbr(包含bbr2/bbrplus/魔改版bbr/锐速)"
     tyblue "11.修改dns"
     tyblue "12.仅升级V2Ray"
     yellow "13.退出脚本"
@@ -1283,7 +1294,7 @@ start_menu()
             ;;
         6)
             readDomain
-            readTlsConfig
+            readTlsConfig2
             web_pretend
             get_certs
             get_info
