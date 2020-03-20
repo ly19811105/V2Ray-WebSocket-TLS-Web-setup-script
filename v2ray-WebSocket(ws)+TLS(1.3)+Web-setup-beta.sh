@@ -98,6 +98,15 @@ readTlsConfig()
     done
 }
 
+#读取当前的tls配置
+readTleConfig2()
+{
+    if grep -m 1 "ssl_protocols" /etc/nginx/conf.d/v2ray.conf | grep -q "TLSv1.2" ; then
+        tlsVersion=1
+    else
+        tlsVersion=2
+    fi
+}
 
 #配置nginx(部分)
 configtls_part()
@@ -1174,7 +1183,7 @@ start_menu()
     tyblue "4.重启/启动V2Ray-WebSocket+TLS+Web服务(对于玄学断连/掉速有奇效)"
     tyblue "5.重置域名和TLS配置"
     tyblue "  (会覆盖原有域名配置，配置过程中域名输错了造成V2Ray无法启动可以用此选项修复)"
-    tyblue "6.添加域名(不同域名可以有不同的TLS配置)"
+    tyblue "6.添加域名"
     if [ ! -e /etc/v2ray/config.json ] || grep -q "id" /etc/v2ray/config.json >> /dev/null 2>&1 ; then
         tyblue "7.使用socks(5)作为底层传输协议(降低计算量、延迟)(beta)"
     else
@@ -1285,7 +1294,7 @@ start_menu()
             ;;
         6)
             readDomain
-            readTlsConfig
+            readTlsConfig2
             web_pretend
             get_certs
             get_info
