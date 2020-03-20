@@ -99,7 +99,7 @@ readTlsConfig()
 }
 
 #读取当前的tls配置
-readTleConfig2()
+readTlsConfig2()
 {
     if grep -m 1 "ssl_protocols" /etc/nginx/conf.d/v2ray.conf | grep -q "TLSv1.2" ; then
         tlsVersion=1
