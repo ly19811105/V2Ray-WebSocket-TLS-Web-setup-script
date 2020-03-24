@@ -141,33 +141,50 @@ failed_version()
 
 last_version()
 {
-    if ! [[ $kernel =~ "rc" ]] ; then
-        echo "脚本出错！！"
-        exit 1
+    if [ "$kernel" != "${kernel_list[kernel_i]}" ]; then
+        kernel=${kernel_list[kernel_i]}
+        return 0
     fi
-    rc_version=${kernel#*-rc}
-    kernel=$kernel2
-    if [ "$rc_version" == "1" ]; then
-        kernel_wei=${kernel##*.}
-        kernel=${kernel%.*}
-        ((kernel_wei--))
-        if [ "$kernel_wei" != "0" ]; then
-            kernel="$kernel.$kernel_wei"
+    ((kernel_i++))
+    if ! [[ "$kernel" =~ "rc" ]] && [[ "${kernel_list[kernel_i]}" =~ "rc" ]]; then
+        if check_rc2 ${kernel_list[kernel_i]}; then
+            kernel=${kernel_list[kernel_i]%%-*}
+            return 0
         fi
-    else
-        ((rc_version--))
-        kernel="$kernel-rc$rc_version"
     fi
+    if [[ "$kernel" =~ "rc" ]] && [[ "${kernel_list[kernel_i]}" =~ "rc" ]]; then
+        if [ "${kernel%%-*}" != "${kernel_list[kernel_i]%%-*}" ]; then
+            if check_rc2 ${kernel_list[kernel_i]}; then
+                kernel=${kernel_list[kernel_i]%%-*}
+                return 0
+            fi
+        fi
+    fi
+    if [[ "$kernel" =~ "rc" ]] && ! [[ "${kernel_list[kernel_i]}" =~ "rc" ]]; then
+        if [ "${kernel_list[kernel_i]}" == ${kernel%%-*} ]; then
+            ((kernel_i++))
+        fi
+    fi
+    kernel=${kernel_list[kernel_i]}
+}
+
+check_rc2()
+{
+    if [[ "${1}" =~ "rc" ]] ; then
+        local temp=${1%%-*}
+        if echo ${kernel_list[@]} | grep -q " ${temp} " ; then
+            return 0
+        fi
+    fi
+    return 1
 }
 
 get_latest_version() {
-    latest_version=$(wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/ | awk -F'\"v' '/v[0-9]/{print $2}' | cut -d '"' -f1 | cut -d '/' -f1 | sort -rV)
-    kernel=$(echo $latest_version | cut -d ' ' -f 1)
-    if [[ $kernel =~ "rc" ]] ; then
-        kernel2=${kernel%%-*}
-        if echo $latest_version | grep " $kernel2 " ; then
-            kernel=$kernel2
-        fi
+    kernel_list=($(wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/ | awk -F'\"v' '/v[0-9]/{print $2}' | cut -d '"' -f1 | cut -d '/' -f1 | sort -rV))
+    kernel_i=0
+    kernel=${kernel_list[kernel_i]}
+    if check_rc2 ${kernel}; then
+        kernel=${kernel%%-*}
     fi
     while failed_version $kernel ;
     do
