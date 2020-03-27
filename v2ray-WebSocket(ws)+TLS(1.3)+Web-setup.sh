@@ -121,7 +121,7 @@ worker_processes  8;
 #error_log  logs/error.log  info;
 
 #pid        logs/nginx.pid;
-
+google_perftools_profiles /tmp/tcmalloc;
 
 events {
     worker_connections  1024;
