@@ -121,7 +121,7 @@ worker_processes  8;
 #error_log  logs/error.log  info;
 
 #pid        logs/nginx.pid;
-
+google_perftools_profiles /tmp/tcmalloc;
 
 events {
     worker_connections  1024;
@@ -854,6 +854,9 @@ install_v2ray_ws_tls()
     sed -i 's#CFLAGS="\$CFLAGS -g #CFLAGS="\$CFLAGS #' auto/cc/*                      ##关闭调试
     make
     make install
+    mkdir /tmp/tcmalloc
+    chmod 0777 /tmp/tcmalloc
+    #用于tcmalloc给nginx优化的文件夹
     mkdir /etc/nginx/certs
     mkdir /etc/nginx/conf.d
     cd ..
