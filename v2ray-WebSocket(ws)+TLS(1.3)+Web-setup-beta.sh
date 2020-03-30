@@ -551,7 +551,7 @@ install_bbr()
         fi
         if [[ $last_v =~ "rc" ]] ; then
             last_v2=${last_v%%-*}
-            if echo $version | grep " $last_v2 " ; then
+            if echo $version | grep -q " $last_v2 " ; then
                 last_v=$last_v2
             fi
         fi
