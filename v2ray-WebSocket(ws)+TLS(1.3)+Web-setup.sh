@@ -26,9 +26,12 @@ check_domain()
 {
     local temp=${1%%.*}
     if [ "$temp" == "www" ]; then
-        return 0;
+        red "域名前面不要带www！"
+        return 0
+    elif [ "$1" == "" ]; then
+        return 0
     else
-        return 1;
+        return 1
     fi
 }
 
@@ -64,7 +67,6 @@ readDomain()
             read -p "请输入域名：" domain
             while check_domain $domain ;
             do
-                red "域名前面不要带www！"
                 read -p "请输入域名：" domain
             done
             ;;
