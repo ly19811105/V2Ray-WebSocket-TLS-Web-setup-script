@@ -848,7 +848,7 @@ install_v2ray_ws_tls()
         read rubbish
     fi
     tar -zxf ${nginx_version}.tar.gz
-    if ! wget https://github.com/openssl/openssl/archive/${#*-openssl_version}.tar.gz ; then
+    if ! wget https://github.com/openssl/openssl/archive/${openssl_version#*-}.tar.gz ; then
         red    "获取openssl失败"
         red    "你的服务器貌似不支持ipv4"
         yellow "按回车键继续或者按ctrl+c终止"
