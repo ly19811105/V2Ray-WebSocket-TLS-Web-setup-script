@@ -123,7 +123,7 @@ worker_processes  8;
 #error_log  logs/error.log  info;
 
 #pid        logs/nginx.pid;
-google_perftools_profiles /tmp/tcmalloc;
+google_perftools_profiles /etc/nginx/tcmalloc_temp/tcmalloc;
 
 events {
     worker_connections  1024;
@@ -866,6 +866,8 @@ install_v2ray_ws_tls()
     make install
     mkdir /etc/nginx/certs
     mkdir /etc/nginx/conf.d
+    mkdir /etc/nginx/tcmalloc_temp
+    chmod 777 /etc/nginx/tcmalloc_temp
     cd ..
     rm -rf ${nginx_version}.tar.gz
     rm -rf ${openssl_version}.tar.gz
