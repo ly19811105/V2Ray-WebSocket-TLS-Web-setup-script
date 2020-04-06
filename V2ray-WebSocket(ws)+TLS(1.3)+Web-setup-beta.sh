@@ -839,7 +839,6 @@ install_v2ray_ws_tls()
 ##安装nginx
     rm -rf ${nginx_version}.tar.gz
     rm -rf ${openssl_version}.tar.gz
-    rm -rf ${openssl_version#*-}.tar.gz
     rm -rf $openssl_version
     rm -rf ${nginx_version}
     if ! wget https://nginx.org/download/${nginx_version}.tar.gz ; then
@@ -849,14 +848,13 @@ install_v2ray_ws_tls()
         read rubbish
     fi
     tar -zxf ${nginx_version}.tar.gz
-    if ! wget https://github.com/openssl/openssl/archive/${openssl_version#*-}.tar.gz ; then
+    if ! wget -O ${openssl_version}.tar.gz https://github.com/openssl/openssl/archive/${openssl_version#*-}.tar.gz ; then
         red    "获取openssl失败"
         red    "你的服务器貌似不支持ipv4"
         yellow "按回车键继续或者按ctrl+c终止"
         read rubbish
     fi
     tar -zxf ${openssl_version}.tar.gz
-    tar -zxf ${openssl_version#*-}.tar.gz
     cd ${nginx_version}
     ./configure --prefix=/etc/nginx --with-openssl=../$openssl_version --with-openssl-opt="enable-tls1_3 enable-tls1_2 enable-tls1 enable-ssl enable-ssl2 enable-ssl3 enable-ec_nistp_64_gcc_128 shared threads zlib-dynamic sctp" --with-mail=dynamic --with-mail_ssl_module --with-stream=dynamic --with-stream_ssl_module --with-stream_realip_module --with-stream_geoip_module=dynamic --with-stream_ssl_preread_module --with-http_ssl_module --with-http_v2_module --with-http_realip_module --with-http_addition_module --with-http_xslt_module=dynamic --with-http_image_filter_module=dynamic --with-http_geoip_module=dynamic --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_slice_module --with-http_stub_status_module --with-http_perl_module=dynamic --with-pcre --with-libatomic --with-compat --with-cpp_test_module --with-google_perftools_module --with-file-aio --with-threads --with-poll_module --with-select_module --with-cc='cc -O3' --with-cc-opt=-O3
     sed -i 's# -g # #' objs/Makefile                                                  ##关闭调试
@@ -871,7 +869,6 @@ install_v2ray_ws_tls()
     cd ..
     rm -rf ${nginx_version}.tar.gz
     rm -rf ${openssl_version}.tar.gz
-    rm -rf ${openssl_version#*-}.tar.gz
     rm -rf $openssl_version
     rm -rf ${nginx_version}
 ##安装nignx完成
