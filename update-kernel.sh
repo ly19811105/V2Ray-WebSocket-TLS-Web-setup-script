@@ -507,7 +507,7 @@ remove_kernel()
         ok_install=0
         for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
         do
-            if [[ "${kernel_list_headers[$i]}" =~ "$kernel_headers" ]] ; then     
+            if [[ "${kernel_list_headers[$i]}" == "$kernel_headers" ]] ; then     
                 kernel_list_headers[$i]=""
                 ((ok_install++))
             fi
@@ -519,7 +519,7 @@ remove_kernel()
         ok_install=0
         for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
         do
-            if [[ "${kernel_list_headers[$i]}" =~ "$kernel_headers_all" ]] ; then     
+            if [[ "${kernel_list_headers[$i]}" == "$kernel_headers_all" ]] ; then     
                 kernel_list_headers[$i]=""
                 ((ok_install++))
             fi
@@ -532,7 +532,7 @@ remove_kernel()
     ok_install=0
     for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
     do
-        if [[ "${kernel_list_image[$i]}" =~ "$kernel_image" ]] ; then     
+        if [[ "${kernel_list_image[$i]}" == "$kernel_image" ]] ; then     
             kernel_list_image[$i]=""
             ((ok_install++))
         fi
@@ -544,7 +544,7 @@ remove_kernel()
     ok_install=0
     for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
     do
-        if [[ "${kernel_list_modules[$i]}" =~ "$kernel_modules" ]] ; then     
+        if [[ "${kernel_list_modules[$i]}" == "$kernel_modules" ]] ; then     
             kernel_list_modules[$i]=""
             ((ok_install++))
         fi
