@@ -363,6 +363,8 @@ install_config() {
             fi
             grub2-set-default 0
         fi
+    elif [[ x"${release}" == x"debian" || x"${release}" == x"ubuntu" ]]; then
+        /usr/sbin/update-grub
     fi
 }
 
@@ -460,11 +462,13 @@ install_bbr() {
             if version_ge $systemVersion 18.04 ; then
                 wget ${deb_kernel_headers_all_url}
                 wget ${deb_kernel_headers_generic_url}
+                flag=1
             fi
         else
             if version_ge $systemVersion 10 ; then
                 wget ${deb_kernel_headers_all_url}
                 wget ${deb_kernel_headers_generic_url}
+                flag=1
             fi
         fi
         wget ${deb_kernel_url}
@@ -473,16 +477,108 @@ install_bbr() {
         cd ..
         rm -rf kernel_
         apt -y -f install
+        remove_kernel
     else
         echo -e "${red}Error:${plain} OS is not be supported, please change to CentOS/Debian/Ubuntu and try again."
         exit 1
     fi
-    
     install_config
     #sysctl_config
     reboot_os
 }
 
+remove_kernel()
+{
+    while [ "$auto_remove" != "y" -a "$auto_remove" != "n" ]
+    do
+        read -p "是否卸载多余内核？(y/n)" auto_remove
+    done
+    if [ "$auto_remove" == "n" ]; then
+        return 0
+    fi
+    kernel_list_headers=($(dpkg --list | grep 'linux-headers' | awk '{print $2}'))
+    kernel_list_image=($(dpkg --list | grep 'linux-image' | awk '{print $2}'))
+    kernel_list_modules=($(dpkg --list | grep 'linux-modules' | awk '{print $2}'))
+    kernel_headers_all=${headers_all_deb_name%%_*}
+    kernel_headers=${headers_generic_deb_name%%_*}
+    kernel_image=${deb_name%%_*}
+    kernel_modules=${modules_deb_name%%_*}
+
+
+    if [ "$flag" == "1" ]; then
+
+        ok_install=0
+        for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
+        do
+            if [[ "${kernel_list_headers[$i]}" =~ "$kernel_headers" ]] ; then     
+                kernel_list_headers[$i]=""
+                ((ok_install++))
+            fi
+        done
+        if [ "$ok_install" != "1" ] ; then
+            echo "内核可能安装失败！不卸载"
+            return 1
+        fi
+
+
+
+        ok_install=0
+        for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
+        do
+            if [[ "${kernel_list_headers[$i]}" =~ "$kernel_headers_all" ]] ; then     
+                kernel_list_headers[$i]=""
+                ((ok_install++))
+            fi
+        done
+        if [ "$ok_install" != "1" ] ; then
+            echo "内核可能安装失败！不卸载"
+            return 1
+        fi
+    fi
+
+
+
+
+    ok_install=0
+    for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
+    do
+        if [[ "${kernel_list_image[$i]}" =~ "$kernel_image" ]] ; then     
+            kernel_list_image[$i]=""
+            ((ok_install++))
+        fi
+    done
+    if [ "$ok_install" != "1" ] ; then
+        echo "内核可能安装失败！不卸载"
+        return 1
+    fi
+
+
+
+
+    ok_install=0
+    for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
+    do
+        if [[ "${kernel_list_modules[$i]}" =~ "$kernel_modules" ]] ; then     
+            kernel_list_modules[$i]=""
+            ((ok_install++))
+        fi
+    done
+    if [ "$ok_install" != "1" ] ; then
+        echo "内核可能安装失败！不卸载"
+        return 1
+    fi
+
+
+
+    if [ "$flag" == "1" ]; then
+        apt -y purge ${kernel_list_headers[@]} ${kernel_list_image[@]} ${kernel_list_modules[@]}
+        apt -y remove ${kernel_list_headers[@]} ${kernel_list_image[@]} ${kernel_list_modules[@]}
+    else
+        apt -y purge ${kernel_list_image[@]} ${kernel_list_modules[@]}
+        apt -y remove ${kernel_list_image[@]} ${kernel_list_modules[@]}
+    fi
+    apt -y -f install
+}
 
 clear
 echo "---------- System Information ----------"
