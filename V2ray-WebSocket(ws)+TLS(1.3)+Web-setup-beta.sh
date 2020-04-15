@@ -1,5 +1,5 @@
 #!/bin/bash
-nginx_version=nginx-1.17.9
+nginx_version=nginx-1.17.10
 openssl_version=openssl-OpenSSL_1_1_1f
 
 #定义几个颜色
