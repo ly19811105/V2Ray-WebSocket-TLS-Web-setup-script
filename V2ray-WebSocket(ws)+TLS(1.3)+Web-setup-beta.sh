@@ -416,8 +416,8 @@ updateSystem()
     do
         read -p "您的选择是：" updateconfig
     done
-    yum update
-    apt dist-upgrade -y
+    yum -y update
+    apt -y dist-upgrade
     echo '[DEFAULT]' > /etc/update-manager/release-upgrades
     echo 'Prompt=lts' >> /etc/update-manager/release-upgrades
     case "$updateconfig" in
@@ -442,6 +442,7 @@ updateSystem()
     esac
     apt -y --purge autoremove
     apt clean
+    yum -y autoremove
     yum clean all
 }
 
@@ -475,6 +476,12 @@ doupdate()
             read rubbish
             yum -y update
             apt -y dist-upgrade
+            apt -y --purge autoremove
+            apt clean
+            yum -y autoremove
+            yum clean all
+            ;;
+        3)
             apt -y --purge autoremove
             apt clean
             yum -y autoremove
