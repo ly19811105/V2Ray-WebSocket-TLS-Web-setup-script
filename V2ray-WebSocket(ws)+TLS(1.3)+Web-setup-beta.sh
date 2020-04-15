@@ -814,6 +814,7 @@ install_v2ray_ws_tls()
     install_bbr
     apt -y -f install
     apt -y --purge autoremove
+    yum -y autoremove
     #读取域名
     readDomain
     readTlsConfig
