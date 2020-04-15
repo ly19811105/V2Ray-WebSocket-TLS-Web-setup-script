@@ -1,5 +1,5 @@
 #!/bin/bash
-nginx_version=nginx-1.17.9
+nginx_version=nginx-1.17.10
 openssl_version=openssl-OpenSSL_1_1_1f
 
 #定义几个颜色
@@ -416,8 +416,12 @@ updateSystem()
     do
         read -p "您的选择是：" updateconfig
     done
-    yum update
-    apt dist-upgrade -y
+    yum -y update
+    apt -y dist-upgrade
+    apt -y --purge autoremove
+    apt clean
+    yum -y autoremove
+    yum clean all
     echo '[DEFAULT]' > /etc/update-manager/release-upgrades
     echo 'Prompt=lts' >> /etc/update-manager/release-upgrades
     case "$updateconfig" in
@@ -440,9 +444,6 @@ updateSystem()
             do-release-upgrade
             ;;
     esac
-    apt autopurge -y
-    apt clean
-    yum clean all
 }
 
 
@@ -473,11 +474,17 @@ doupdate()
             yellow "更新过程中若有问话/对话框，如果看不懂，优先选择yes/y/第一个选项"
             yellow "按回车键继续。。。"
             read rubbish
-            yum update -y
-            apt dist-upgrade -y
-            apt autopurge -y
+            yum -y update
+            apt -y dist-upgrade
+            apt -y --purge autoremove
             apt clean
-            yum autoremove -y
+            yum -y autoremove
+            yum clean all
+            ;;
+        3)
+            apt -y --purge autoremove
+            apt clean
+            yum -y autoremove
             yum clean all
             ;;
     esac
@@ -489,10 +496,10 @@ uninstall_firewall()
 {
     ufw disable
     #apt purge iptables -y
-    apt purge firewalld ufw -y
+    apt -y purge firewalld ufw
     #chkconfig iptables off
     systemctl disable firewalld
-    yum remove firewalld -y
+    yum -y remove firewalld
     rm -rf /usr/local/aegis
     rm -rf /usr/local/cloudmonitor
     rm -rf /usr/sbin/aliyun-service
@@ -791,7 +798,7 @@ install_v2ray_ws_tls()
     fi
     apt -y -f install
     remove_v2ray_nginx
-    apt update -y
+    apt update
     uninstall_firewall
     doupdate
     uninstall_firewall
@@ -806,7 +813,10 @@ install_v2ray_ws_tls()
     fi
     install_bbr
     apt -y -f install
-    readDomain                                                                                      #读取域名
+    apt -y --purge autoremove
+    yum -y autoremove
+    #读取域名
+    readDomain
     readTlsConfig
     web_pretend
     yum install -y gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make                   ##libxml2-devel非必须
@@ -815,7 +825,7 @@ install_v2ray_ws_tls()
             apt -y install gcc-10 g++-10
             apt -y purge gcc g++ gcc-9 g++-9 gcc-8 g++-8 gcc-7 g++-7
             apt -y install gcc-10 g++-10
-            apt autopurge -y
+            apt -y autopurge
             ln -s -f /usr/bin/gcc-10 /usr/bin/gcc
             ln -s -f /usr/bin/gcc-10 /usr/bin/cc
             ln -s -f /usr/bin/g++-10 /usr/bin/g++
@@ -829,9 +839,8 @@ install_v2ray_ws_tls()
         apt -y install gcc g++
     fi
     apt install -y libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make                                          ##libxml2-dev非必须
-    apt autopurge -y
-    apt autoremove -y
-    yum autoremove -y
+    apt -y --purge autoremove
+    yum -y autoremove
     apt clean
     yum clean all
 
@@ -839,7 +848,6 @@ install_v2ray_ws_tls()
 ##安装nginx
     rm -rf ${nginx_version}.tar.gz
     rm -rf ${openssl_version}.tar.gz
-    rm -rf ${openssl_version#*-}.tar.gz
     rm -rf $openssl_version
     rm -rf ${nginx_version}
     if ! wget https://nginx.org/download/${nginx_version}.tar.gz ; then
@@ -849,14 +857,13 @@ install_v2ray_ws_tls()
         read rubbish
     fi
     tar -zxf ${nginx_version}.tar.gz
-    if ! wget https://github.com/openssl/openssl/archive/${openssl_version#*-}.tar.gz ; then
+    if ! wget -O ${openssl_version}.tar.gz https://github.com/openssl/openssl/archive/${openssl_version#*-}.tar.gz ; then
         red    "获取openssl失败"
         red    "你的服务器貌似不支持ipv4"
         yellow "按回车键继续或者按ctrl+c终止"
         read rubbish
     fi
     tar -zxf ${openssl_version}.tar.gz
-    tar -zxf ${openssl_version#*-}.tar.gz
     cd ${nginx_version}
     ./configure --prefix=/etc/nginx --with-openssl=../$openssl_version --with-openssl-opt="enable-tls1_3 enable-tls1_2 enable-tls1 enable-ssl enable-ssl2 enable-ssl3 enable-ec_nistp_64_gcc_128 shared threads zlib-dynamic sctp" --with-mail=dynamic --with-mail_ssl_module --with-stream=dynamic --with-stream_ssl_module --with-stream_realip_module --with-stream_geoip_module=dynamic --with-stream_ssl_preread_module --with-http_ssl_module --with-http_v2_module --with-http_realip_module --with-http_addition_module --with-http_xslt_module=dynamic --with-http_image_filter_module=dynamic --with-http_geoip_module=dynamic --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_slice_module --with-http_stub_status_module --with-http_perl_module=dynamic --with-pcre --with-libatomic --with-compat --with-cpp_test_module --with-google_perftools_module --with-file-aio --with-threads --with-poll_module --with-select_module --with-cc='cc -O3' --with-cc-opt=-O3
     sed -i 's# -g # #' objs/Makefile                                                  ##关闭调试
@@ -871,7 +878,6 @@ install_v2ray_ws_tls()
     cd ..
     rm -rf ${nginx_version}.tar.gz
     rm -rf ${openssl_version}.tar.gz
-    rm -rf ${openssl_version#*-}.tar.gz
     rm -rf $openssl_version
     rm -rf ${nginx_version}
 ##安装nignx完成
