@@ -418,6 +418,10 @@ updateSystem()
     done
     yum -y update
     apt -y dist-upgrade
+    apt -y --purge autoremove
+    apt clean
+    yum -y autoremove
+    yum clean all
     echo '[DEFAULT]' > /etc/update-manager/release-upgrades
     echo 'Prompt=lts' >> /etc/update-manager/release-upgrades
     case "$updateconfig" in
@@ -440,10 +444,6 @@ updateSystem()
             do-release-upgrade
             ;;
     esac
-    apt -y --purge autoremove
-    apt clean
-    yum -y autoremove
-    yum clean all
 }
 
 
