@@ -503,10 +503,7 @@ remove_kernel()
     kernel_headers=${headers_generic_deb_name%%_*}
     kernel_image=${deb_name%%_*}
     kernel_modules=${modules_deb_name%%_*}
-
-
     if [ "$flag" == "1" ]; then
-
         ok_install=0
         for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
         do
@@ -519,9 +516,6 @@ remove_kernel()
             echo "内核可能安装失败！不卸载"
             return 1
         fi
-
-
-
         ok_install=0
         for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
         do
@@ -535,10 +529,6 @@ remove_kernel()
             return 1
         fi
     fi
-
-
-
-
     ok_install=0
     for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
     do
@@ -551,10 +541,6 @@ remove_kernel()
         echo "内核可能安装失败！不卸载"
         return 1
     fi
-
-
-
-
     ok_install=0
     for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
     do
@@ -568,7 +554,6 @@ remove_kernel()
         return 1
     fi
 
-
     echo "卸载过程中弹出对话框，请选择NO！"
     echo "卸载过程中弹出对话框，请选择NO！"
     echo "卸载过程中弹出对话框，请选择NO！"
@@ -576,10 +561,10 @@ remove_kernel()
     read rubbish
     if [ "$flag" == "1" ]; then
         apt -y purge ${kernel_list_headers[@]} ${kernel_list_image[@]} ${kernel_list_modules[@]}
-        apt -y remove ${kernel_list_headers[@]} ${kernel_list_image[@]} ${kernel_list_modules[@]}
+        #apt -y remove ${kernel_list_headers[@]} ${kernel_list_image[@]} ${kernel_list_modules[@]}
     else
         apt -y purge ${kernel_list_image[@]} ${kernel_list_modules[@]}
-        apt -y remove ${kernel_list_image[@]} ${kernel_list_modules[@]}
+        #apt -y remove ${kernel_list_image[@]} ${kernel_list_modules[@]}
     fi
     apt -y -f install
 }
