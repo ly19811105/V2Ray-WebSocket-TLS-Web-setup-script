@@ -569,7 +569,11 @@ remove_kernel()
     fi
 
 
-
+    echo "卸载过程中弹出对话框，请选择NO！"
+    echo "卸载过程中弹出对话框，请选择NO！"
+    echo "卸载过程中弹出对话框，请选择NO！"
+    echo "按回车键继续"
+    read rubbish
     if [ "$flag" == "1" ]; then
         apt -y purge ${kernel_list_headers[@]} ${kernel_list_image[@]} ${kernel_list_modules[@]}
         apt -y remove ${kernel_list_headers[@]} ${kernel_list_image[@]} ${kernel_list_modules[@]}
