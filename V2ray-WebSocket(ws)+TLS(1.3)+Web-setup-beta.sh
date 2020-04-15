@@ -440,7 +440,7 @@ updateSystem()
             do-release-upgrade
             ;;
     esac
-    apt autopurge -y
+    apt -y --purge autoremove
     apt clean
     yum clean all
 }
@@ -473,11 +473,11 @@ doupdate()
             yellow "更新过程中若有问话/对话框，如果看不懂，优先选择yes/y/第一个选项"
             yellow "按回车键继续。。。"
             read rubbish
-            yum update -y
-            apt dist-upgrade -y
-            apt autopurge -y
+            yum -y update
+            apt -y dist-upgrade
+            apt -y --purge autoremove
             apt clean
-            yum autoremove -y
+            yum -y autoremove
             yum clean all
             ;;
     esac
@@ -489,10 +489,10 @@ uninstall_firewall()
 {
     ufw disable
     #apt purge iptables -y
-    apt purge firewalld ufw -y
+    apt -y purge firewalld ufw
     #chkconfig iptables off
     systemctl disable firewalld
-    yum remove firewalld -y
+    yum -y remove firewalld
     rm -rf /usr/local/aegis
     rm -rf /usr/local/cloudmonitor
     rm -rf /usr/sbin/aliyun-service
@@ -791,7 +791,7 @@ install_v2ray_ws_tls()
     fi
     apt -y -f install
     remove_v2ray_nginx
-    apt update -y
+    apt update
     uninstall_firewall
     doupdate
     uninstall_firewall
@@ -806,7 +806,9 @@ install_v2ray_ws_tls()
     fi
     install_bbr
     apt -y -f install
-    readDomain                                                                                      #读取域名
+    apt -y --purge autoremove
+    #读取域名
+    readDomain
     readTlsConfig
     web_pretend
     yum install -y gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make                   ##libxml2-devel非必须
@@ -815,7 +817,7 @@ install_v2ray_ws_tls()
             apt -y install gcc-10 g++-10
             apt -y purge gcc g++ gcc-9 g++-9 gcc-8 g++-8 gcc-7 g++-7
             apt -y install gcc-10 g++-10
-            apt autopurge -y
+            apt -y autopurge
             ln -s -f /usr/bin/gcc-10 /usr/bin/gcc
             ln -s -f /usr/bin/gcc-10 /usr/bin/cc
             ln -s -f /usr/bin/g++-10 /usr/bin/g++
@@ -829,9 +831,8 @@ install_v2ray_ws_tls()
         apt -y install gcc g++
     fi
     apt install -y libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make                                          ##libxml2-dev非必须
-    apt autopurge -y
-    apt autoremove -y
-    yum autoremove -y
+    apt -y --purge autoremove
+    yum -y autoremove
     apt clean
     yum clean all
 
