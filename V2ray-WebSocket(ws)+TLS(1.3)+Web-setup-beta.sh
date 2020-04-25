@@ -1,6 +1,6 @@
 #!/bin/bash
 nginx_version=nginx-1.18.0
-openssl_version=openssl-OpenSSL_1_1_1g
+openssl_version=openssl-3.0.0-alpha1
 
 #定义几个颜色
 tyblue()                           #天依蓝
@@ -850,14 +850,14 @@ install_v2ray_ws_tls()
     rm -rf ${openssl_version}.tar.gz
     rm -rf $openssl_version
     rm -rf ${nginx_version}
-    if ! wget https://nginx.org/download/${nginx_version}.tar.gz ; then
+    if ! wget -O ${nginx_version}.tar.gz https://nginx.org/download/${nginx_version}.tar.gz ; then
         red    "获取nginx失败"
         red    "你的服务器貌似没有联网"
         yellow "按回车键继续或者按ctrl+c终止"
         read rubbish
     fi
     tar -zxf ${nginx_version}.tar.gz
-    if ! wget -O ${openssl_version}.tar.gz https://github.com/openssl/openssl/archive/${openssl_version#*-}.tar.gz ; then
+    if ! wget -O ${openssl_version}.tar.gz https://www.openssl.org/source/${openssl_version}.tar.gz ; then
         red    "获取openssl失败"
         red    "你的服务器貌似不支持ipv4"
         yellow "按回车键继续或者按ctrl+c终止"
