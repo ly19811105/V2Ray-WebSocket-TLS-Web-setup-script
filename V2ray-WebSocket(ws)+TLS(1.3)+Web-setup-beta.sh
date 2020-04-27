@@ -865,7 +865,7 @@ install_v2ray_ws_tls()
     fi
     tar -zxf ${openssl_version}.tar.gz
     cd ${openssl_version}
-    sed -i 's#"OpenSSL {- "$config{full_version} $config{release_date}" -}"#"OpenSSL {- "$config{full_version}" -}"#g' include/openssl/opensslv.h
+    sed -i 's#"OpenSSL {- "$config{full_version} $config{release_date}" -}"#"OpenSSL {- "$config{full_version}" -}"#g' include/openssl/opensslv.h.in
     cd ..
     cd ${nginx_version}
     sed -i 's# -g # #g' `grep " \-g " -rl auto`
@@ -891,7 +891,7 @@ install_v2ray_ws_tls()
     rm -rf ${openssl_version}.tar.gz
     rm -rf $openssl_version
     rm -rf ${nginx_version}
-    ##安装nignx完成
+##安装nignx完成
 
 
     curl https://get.acme.sh | sh
