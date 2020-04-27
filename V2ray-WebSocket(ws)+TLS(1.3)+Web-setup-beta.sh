@@ -864,11 +864,22 @@ install_v2ray_ws_tls()
         read rubbish
     fi
     tar -zxf ${openssl_version}.tar.gz
+    cd ${openssl_version}
+    sed -i 's#"OpenSSL {- "$config{full_version} $config{release_date}" -}"#"OpenSSL {- "$config{full_version}" -}"#g' include/openssl/opensslv.h
+    cd ..
     cd ${nginx_version}
-    ./configure --prefix=/etc/nginx --with-openssl=../$openssl_version --with-openssl-opt="enable-tls1_3 enable-tls1_2 enable-tls1 enable-ssl enable-ssl2 enable-ssl3 enable-ec_nistp_64_gcc_128 shared threads zlib-dynamic sctp" --with-mail=dynamic --with-mail_ssl_module --with-stream=dynamic --with-stream_ssl_module --with-stream_realip_module --with-stream_geoip_module=dynamic --with-stream_ssl_preread_module --with-http_ssl_module --with-http_v2_module --with-http_realip_module --with-http_addition_module --with-http_xslt_module=dynamic --with-http_image_filter_module=dynamic --with-http_geoip_module=dynamic --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_slice_module --with-http_stub_status_module --with-http_perl_module=dynamic --with-pcre --with-libatomic --with-compat --with-cpp_test_module --with-google_perftools_module --with-file-aio --with-threads --with-poll_module --with-select_module --with-cc='cc -O3' --with-cc-opt=-O3
-    sed -i 's# -g # #' objs/Makefile                                                  ##关闭调试
-    sed -i 's#CFLAGS="\$CFLAGS -g"#CFLAGS="\$CFLAGS"#' auto/cc/*                      ##关闭调试
-    sed -i 's#CFLAGS="\$CFLAGS -g #CFLAGS="\$CFLAGS #' auto/cc/*                      ##关闭调试
+    sed -i 's# -g # #g' `grep " \-g " -rl auto`
+    sed -i 's# -g"# "#g' `grep " \-g\"" -rl auto`
+    sed -i 's#-O #-O3 #g' `grep "\-O " -rl auto`
+    sed -i 's#-O"#-O3"#g' `grep "\-O\"" -rl auto`
+    sed -i 's#-O2#-O3#g' `grep "\-O2" -rl auto`
+    sed -i 's#-O1#-O3#g' `grep "\-O1" -rl auto`
+    sed -i 's#-Os#-O3#g' `grep "\-Os" -rl auto`
+    sed -i 's#-Og#-O3#g' `grep "\-Og" -rl auto`
+    sed -i 's#-Oz#-O3#g' `grep "\-Oz" -rl auto`
+    sed -i s#\'-O\'#\'-O3\'#g src/http/modules/perl/Makefile.PL
+    sed -i 's#-Werror# #g' `grep "\-Werror" -rl auto`
+    ./configure --prefix=/etc/nginx --with-openssl=../$openssl_version --with-openssl-opt="enable-tls1_3 enable-tls1_2 enable-tls1 enable-ssl enable-ssl2 enable-ssl3 enable-ec_nistp_64_gcc_128 shared threads zlib-dynamic sctp" --with-mail=dynamic --with-mail_ssl_module --with-stream=dynamic --with-stream_ssl_module --with-stream_realip_module --with-stream_geoip_module=dynamic --with-stream_ssl_preread_module --with-http_ssl_module --with-http_v2_module --with-http_realip_module --with-http_addition_module --with-http_xslt_module=dynamic --with-http_image_filter_module=dynamic --with-http_geoip_module=dynamic --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_slice_module --with-http_stub_status_module --with-http_perl_module=dynamic --with-pcre --with-libatomic --with-compat --with-cpp_test_module --with-google_perftools_module --with-file-aio --with-threads --with-poll_module --with-select_module --with-cc-opt=-O3
     make
     make install
     mkdir /etc/nginx/certs
@@ -880,7 +891,7 @@ install_v2ray_ws_tls()
     rm -rf ${openssl_version}.tar.gz
     rm -rf $openssl_version
     rm -rf ${nginx_version}
-##安装nignx完成
+    ##安装nignx完成
 
 
     curl https://get.acme.sh | sh
