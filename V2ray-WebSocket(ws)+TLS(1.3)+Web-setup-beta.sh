@@ -149,7 +149,7 @@ readTlsConfig()
     echo
     tyblue "1.TLS1.2+1.3"
     tyblue "2.仅TLS1.3"
-    tlsVersion=777
+    tlsVersion=""
     while [ "$tlsVersion" != "1" -a "$tlsVersion" != "2" ]
     do
         read -p "您的选择是："  tlsVersion
@@ -283,7 +283,7 @@ EOF
 }
 
 
-#配置nginx 参数：  domain  tlsversion  domainconfig   path   port   pretend
+#配置nginx 参数：  domain  domainconfig  pretend
 configtls()
 {
     configtls_init
@@ -292,7 +292,7 @@ server {
     listen 80 fastopen=100 reuseport default_server;
     listen [::]:80 fastopen=100 reuseport default_server;
 EOF
-    if [ $3 -eq 1 ]; then
+    if [ $2 -eq 1 ]; then
         echo "    return 301 https://www.$1;" >> /etc/nginx/conf.d/v2ray.conf
     else
         echo "    return 301 https://$1;" >> /etc/nginx/conf.d/v2ray.conf
@@ -311,7 +311,7 @@ server {
     ssl_certificate       /root/.acme.sh/${1}_ecc/fullchain.cer;
     ssl_certificate_key   /root/.acme.sh/${1}_ecc/$1.key;
 EOF
-    if [ $2 -eq 1 ]; then
+    if [ $tlsVersion -eq 1 ]; then
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
     ssl_protocols         TLSv1.3 TLSv1.2;
     ssl_ciphers           ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
@@ -321,7 +321,7 @@ cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
     ssl_protocols         TLSv1.3;
 EOF
     fi
-    if [ $3 -eq 1 ]; then
+    if [ $2 -eq 1 ]; then
         echo "    return 301 https://www.$1;" >> /etc/nginx/conf.d/v2ray.conf
     else
         echo "    return 301 https://$1;" >> /etc/nginx/conf.d/v2ray.conf
@@ -335,7 +335,7 @@ server {
     ssl_certificate       /root/.acme.sh/${1}_ecc/fullchain.cer;
     ssl_certificate_key   /root/.acme.sh/${1}_ecc/$1.key;
 EOF
-    if [ $2 -eq 1 ]; then
+    if [ $tlsVersion -eq 1 ]; then
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
     ssl_protocols         TLSv1.3 TLSv1.2;
     ssl_ciphers           ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
@@ -351,16 +351,16 @@ cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
     ssl_trusted_certificate /root/.acme.sh/${1}_ecc/fullchain.cer;
     add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload" always;
     root /etc/nginx/html/$1;
-    location $4 {
+    location $path {
         proxy_redirect off;
-        proxy_pass http://127.0.0.1:$5;
+        proxy_pass http://127.0.0.1:$port;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host \$http_host;
     }
 EOF
-    if [ $6 -eq 2 ]; then
+    if [ $3 -eq 2 ]; then
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
     location / {
         proxy_pass https://v.qq.com;
@@ -369,7 +369,7 @@ cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
 EOF
     fi
     echo '}' >> /etc/nginx/conf.d/v2ray.conf
-    if [ $3 -eq 1 ]; then
+    if [ $2 -eq 1 ]; then
         sed -i "s/server_name $1/& www.$1/" /etc/nginx/conf.d/v2ray.conf
     fi
 }
@@ -924,7 +924,7 @@ install_v2ray_ws_tls()
 ##获取端口、id和path
     get_base_information
 ##配置nginx
-    configtls $domain $tlsVersion $domainconfig $path $port $pretend
+    configtls $domain $domainconfig $pretend
 ##配置v2ray文件
     config_v2ray_vmess
 
@@ -1227,30 +1227,28 @@ start_menu()
     tyblue "3.仅升级V2Ray"
     red    "4.卸载V2Ray-WebSocket+TLS+Web"
     tyblue "5.仅安装bbr(包含bbr2/bbrplus/魔改版bbr/锐速)"
-    tyblue "6.升级证书"
-    tyblue "7.强制升级证书"
     tyblue "--------------启动/停止-------------"
-    tyblue "8.重启/启动V2Ray-WebSocket+TLS+Web(对于玄学断连/掉速有奇效)"
-    tyblue "9.停止V2Ray-WebSocket+TLS+Web"
+    tyblue "6.重启/启动V2Ray-WebSocket+TLS+Web(对于玄学断连/掉速有奇效)"
+    tyblue "7.停止V2Ray-WebSocket+TLS+Web"
     tyblue "----------------管理----------------"
-    tyblue "10.重置域名和TLS配置"
+    tyblue "8.重置域名和TLS配置"
     tyblue "  (会覆盖原有域名配置，配置过程中域名输错了造成V2Ray无法启动可以用此选项修复)"
-    tyblue "11.添加域名"
-    tyblue "12.删除域名"
+    tyblue "9.添加域名"
+    tyblue "10.删除域名"
     if [ ! -e /etc/v2ray/config.json ] || grep -q "id" /etc/v2ray/config.json >> /dev/null 2>&1 ; then
-        tyblue "13.使用socks(5)作为底层传输协议(降低计算量、延迟)(beta)"
+        tyblue "11.使用socks(5)作为底层传输协议(降低计算量、延迟)(beta)"
     else
-        tyblue "13.返回vmess作为底层传输协议"
+        tyblue "11.返回vmess作为底层传输协议"
     fi
-    tyblue "14.查看/修改用户ID(id)"
-    tyblue "15.查看/修改路径(path)"
+    tyblue "12.查看/修改用户ID(id)"
+    tyblue "13.查看/修改路径(path)"
     tyblue "----------------其它----------------"
-    tyblue "16.尝试修复退格键无法使用的问题"
-    tyblue "17.修改dns"
-    yellow "18.退出脚本"
+    tyblue "14.尝试修复退格键无法使用的问题"
+    tyblue "15.修改dns"
+    yellow "16.退出脚本"
     echo
     choice=""
-    while [[ "$choice" != "1" && "$choice" != "2" && "$choice" != "3" && "$choice" != "4" && "$choice" != "5" && "$choice" != "6" && "$choice" != "7" && "$choice" != "8" && "$choice" != "9" && "$choice" != "10" && "$choice" != "11" && "$choice" != "12" && "$choice" != "13" && "$choice" != "14" && "$choice" != "15" && "$choice" != "16" && "$choice" != "17" && "$choice" != "18" ]]
+    while [[ "$choice" != "1" && "$choice" != "2" && "$choice" != "3" && "$choice" != "4" && "$choice" != "5" && "$choice" != "6" && "$choice" != "7" && "$choice" != "8" && "$choice" != "9" && "$choice" != "10" && "$choice" != "11" && "$choice" != "12" && "$choice" != "13" && "$choice" != "14" && "$choice" != "15" && "$choice" != "16" ]]
     do
         read -p "您的选择是：" choice
     done
@@ -1321,6 +1319,7 @@ start_menu()
             ;;
         6)
             readDomain
+            get_base_information
             new_domain $domain $domainconfig $pretend
             green "添加域名完成！！"
             case "$domainconfig" in
