@@ -348,7 +348,7 @@ EOF
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
     ssl_stapling on;
     ssl_stapling_verify on;
-    ssl_trusted_certificate /etc/nginx/certs/$1.cer;
+    ssl_trusted_certificate /root/.acme.sh/${1}_ecc/fullchain.cer;
     add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload" always;
     root /etc/nginx/html/$1;
     location $4 {
@@ -924,7 +924,7 @@ install_v2ray_ws_tls()
 ##获取端口、id和path
     get_base_information
 ##配置nginx
-    configtls $domain $tlsVsersion $domainconfig $path $port $pretend
+    configtls $domain $tlsVersion $domainconfig $path $port $pretend
 ##配置v2ray文件
     config_v2ray_vmess
 
@@ -1221,7 +1221,7 @@ start_menu()
     yellow "测试退格键正常方法：按一下退格键，不会出现奇怪的字符即为正常"
     yellow "若退格键异常可以选择选项16修复"
     tyblue "---------------------------------------------------------------------------"
-    tyblue "-------------------------------安装/升级/卸载------------------------------"
+    tyblue "-----------安装/升级/卸载-----------"
     green  "1.安装/重新安装V2Ray-WebSocket+TLS+Web"
     green  "2.升级V2Ray-WebSocket+TLS+Web"
     tyblue "3.仅升级V2Ray"
@@ -1229,10 +1229,10 @@ start_menu()
     tyblue "5.仅安装bbr(包含bbr2/bbrplus/魔改版bbr/锐速)"
     tyblue "6.升级证书"
     tyblue "7.强制升级证书"
-    tyblue "---------------------------------启动/停止---------------------------------"
+    tyblue "--------------启动/停止-------------"
     tyblue "8.重启/启动V2Ray-WebSocket+TLS+Web(对于玄学断连/掉速有奇效)"
     tyblue "9.停止V2Ray-WebSocket+TLS+Web"
-    tyblue "------------------------------------管理-----------------------------------"
+    tyblue "----------------管理----------------"
     tyblue "10.重置域名和TLS配置"
     tyblue "  (会覆盖原有域名配置，配置过程中域名输错了造成V2Ray无法启动可以用此选项修复)"
     tyblue "11.添加域名"
@@ -1244,17 +1244,17 @@ start_menu()
     fi
     tyblue "14.查看/修改用户ID(id)"
     tyblue "15.查看/修改路径(path)"
-    tyblue "------------------------------------其它-----------------------------------"
+    tyblue "----------------其它----------------"
     tyblue "16.尝试修复退格键无法使用的问题"
     tyblue "17.修改dns"
     yellow "18.退出脚本"
     echo
-    menu=""
-    while [ "$menu" != "1" -a "$menu" != "2" -a "$menu" != "3" -a "$menu" != "4" -a "$menu" != "5" -a "$menu" != "6" -a "$menu" != "7" -a "$menu" != "8" -a "$menu" != "9" -a "$menu" != "10" -a "$menu" != "11" -a "$menu" != "12" -a "$menu" != "13" -a "$menu" != "14" -a "$menu" != "15" -a "$menu" != "16" -a "$menu" != "17" -a "$menu" != "18" ]
+    choice=""
+    while [[ "$choice" != "1" && "$choice" != "2" && "$choice" != "3" && "$choice" != "4" && "$choice" != "5" && "$choice" != "6" && "$choice" != "7" && "$choice" != "8" && "$choice" != "9" && "$choice" != "10" && "$choice" != "11" && "$choice" != "12" && "$choice" != "13" && "$choice" != "14" && "$choice" != "15" && "$choice" != "16" && "$choice" != "17" && "$choice" != "18" ]]
     do
-        read -p "您的选择是：" menu
+        read -p "您的选择是：" choice
     done
-    case "$menu" in
+    case "$choice" in
         1)
             install_v2ray_ws_tls
             ;;
@@ -1273,13 +1273,13 @@ start_menu()
             start_menu
             ;;
         3)
-            if_remove=""
-            while [ "$if_remove" != "y" -a "$if_remove" != "n" ]
+            choice=""
+            while [ "$choice" != "y" -a "$choice" != "n" ]
             do
                 yellow "删除V2Ray-WebSocket(ws)+TLS(1.3)+Web?(y/n)"
-                read if_remove
+                read choice
             done
-            if [ "$if_remove" == "n" ]; then
+            if [ "$choice" == "n" ]; then
                 exit 0
             fi
             remove_v2ray_nginx
@@ -1320,7 +1320,8 @@ start_menu()
             fi
             ;;
         6)
-            new_domain
+            readDomain
+            new_domain $domain $domainconfig $pretend
             green "添加域名完成！！"
             case "$domainconfig" in
                 1)
