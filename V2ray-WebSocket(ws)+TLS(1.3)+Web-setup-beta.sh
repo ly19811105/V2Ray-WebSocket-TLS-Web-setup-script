@@ -467,7 +467,6 @@ EOF
 #升级系统组件
 doupdate()
 {
-    #升级系统
     updateSystem()
     {
         echo -e "\n\n\n"
@@ -480,15 +479,13 @@ doupdate()
         tyblue "发行版：即稳定版"
         tyblue "LTS版：长期支持版本，可以理解为超级稳定版"
         tyblue "*************************注意事项*************************"
-        tyblue "1.升级系统仅对ubuntu有效，非ubuntu系统将仅更新软件包"
-        yellow "2.升级系统可能需要15分钟或更久"
-        yellow "3.升级系统完成后将会重启，重启后，请再次运行此脚本完成剩余安装"
-        yellow "4.有的时候不能一次性更新到所选择的版本，可能要更新两次，所以更新完"
+        yellow "1.升级系统可能需要15分钟或更久"
+        yellow "2.升级系统完成后将会重启，重启后，请再次运行此脚本完成剩余安装"
+        yellow "3.有的时候不能一次性更新到所选择的版本，可能要更新两次，所以更新完"
         yellow "  第一次重启后，若还未升级到选定版本，请再选择相同的升级版本"
-        yellow "5.升级过程中若有问话/对话框，如果看不懂，优先选择yes/y/第一个选项"
-        yellow "6.若升级过程中与ssh断开连接，建议重置系统"
-        yellow "7.升级系统后ssh超时时间将会恢复默认"
-        tyblue "8.ubuntu20.04暂不支持bbr2"
+        yellow "4.升级过程中若有问话/对话框，如果看不懂，优先选择yes/y/第一个选项"
+        yellow "5.升级过程中如果与ssh断开连接，建议重置系统"
+        yellow "6.升级系统后ssh超时时间/ssh端口号将会恢复默认"
         tyblue "**********************************************************"
         green  "您现在的系统版本是$systemVersion"
         tyblue "**********************************************************"
@@ -498,6 +495,12 @@ doupdate()
         do
             read -p "您的选择是：" choice
         done
+        if [ "$(cat /etc/ssh/sshd_config |grep -i "port 22" | awk '{print $2}')" != "22" ]; then
+            red "检测到ssh端口号被修改"
+            red "升级系统后ssh端口号将恢复默认值(22)"
+            yellow "按回车键继续。。。"
+            read rubbish
+        fi
         apt -y dist-upgrade
         apt -y --purge autoremove
         apt clean
@@ -505,22 +508,22 @@ doupdate()
         echo 'Prompt=lts' >> /etc/update-manager/release-upgrades
         case "$choice" in
             1)
-            do-release-upgrade -d
-            do-release-upgrade -d
-            do-release-upgrade
-            do-release-upgrade
+                do-release-upgrade -d
+                do-release-upgrade -d
+                do-release-upgrade
+                do-release-upgrade
                 sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
-            do-release-upgrade -d
-            do-release-upgrade
+                do-release-upgrade -d
+                do-release-upgrade
                 ;;
             2)
                 sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
-            do-release-upgrade
-            do-release-upgrade
+                do-release-upgrade
+                do-release-upgrade
                 ;;
             3)
-            do-release-upgrade
-            do-release-upgrade
+                do-release-upgrade
+                do-release-upgrade
                 ;;
         esac
     }
