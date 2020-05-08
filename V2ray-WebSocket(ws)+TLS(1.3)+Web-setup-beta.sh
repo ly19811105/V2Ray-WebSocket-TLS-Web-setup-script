@@ -310,9 +310,10 @@ EOF
 }
 
 
-#配置nginx 参数：  domain  domainconfig  pretend
+#配置nginx(重置域名配置) 参数：  domain  domainconfig  pretend
 configtls()
 {
+    get_certs $1 $2
     configtls_init
 cat > /etc/nginx/conf.d/v2ray.conf<<EOF
 server {
@@ -399,25 +400,24 @@ EOF
     if [ $2 -eq 1 ]; then
         sed -i "s/server_name $1/& www.$1/" /etc/nginx/conf.d/v2ray.conf
     fi
+    get_web $1 $3
 }
 
 
-#添加新域名
+#添加新域名 参数：domain domainconfig pretend
 new_domain()
 {
-    readDomain
-    get_certs $domain $domainconfig
-    get_base_information
+    get_certs $1 $2
     configtls_init
-    old_domain=$(grep -m 1 "server_name" /etc/nginx/conf.d/v2ray.conf)
+    local old_domain=$(grep -m 1 "server_name" /etc/nginx/conf.d/v2ray.conf)
     old_domain=${old_domain%';'*}
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name $domain;
-    ssl_certificate       /etc/nginx/certs/$domain.cer;
-    ssl_certificate_key   /etc/nginx/certs/$domain.key;
+    server_name $1;
+    ssl_certificate       /root/.acme.sh/${1}_ecc/fullchain.cer;
+    ssl_certificate_key   /root/.acme.sh/${1}_ecc/${1}.key;
 EOF
     if [ $tlsVersion -eq 1 ]; then
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
@@ -432,9 +432,9 @@ EOF
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
     ssl_stapling on;
     ssl_stapling_verify on;
-    ssl_trusted_certificate /etc/nginx/certs/$domain.cer;
+    ssl_trusted_certificate /root/.acme.sh/${1}_ecc/fullchain.cer;
     add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload" always;
-    root /etc/nginx/html/$domain;
+    root /etc/nginx/html/$1;
     location $path {
         proxy_redirect off;
         proxy_pass http://127.0.0.1:$port;
@@ -444,7 +444,7 @@ cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
         proxy_set_header Host \$http_host;
     }
 EOF
-    if [ $pretend -eq 2 ]; then
+    if [ $3 -eq 2 ]; then
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
     location / {
         proxy_pass https://v.qq.com;
@@ -453,15 +453,14 @@ cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
 EOF
     fi
     echo '}' >> /etc/nginx/conf.d/v2ray.conf
-    if [ $domainconfig -eq 1 ]; then
-        sed -i "0,/$old_domain/s//$old_domain $domain www.$domain/" /etc/nginx/conf.d/v2ray.conf
-        sed -i "s/server_name $domain/& www.$domain/" /etc/nginx/conf.d/v2ray.conf
+    if [ $2 -eq 1 ]; then
+        sed -i "0,/$old_domain/s//$old_domain $1 www.$1/" /etc/nginx/conf.d/v2ray.conf
+        sed -i "s/server_name $1/& www.$1/" /etc/nginx/conf.d/v2ray.conf
     else
-        sed -i "0,/$old_domain/s//$old_domain $domain/" /etc/nginx/conf.d/v2ray.conf
+        sed -i "0,/$old_domain/s//$old_domain $1/" /etc/nginx/conf.d/v2ray.conf
     fi
+    get_web $1 $3
 }
-
-
 
 
 #升级系统组件
@@ -499,7 +498,7 @@ doupdate()
             red "检测到ssh端口号被修改"
             red "升级系统后ssh端口号将恢复默认值(22)"
             yellow "按回车键继续。。。"
-            read rubbish
+            read -s rubbish
         fi
         apt -y dist-upgrade
         apt -y --purge autoremove
@@ -558,7 +557,7 @@ doupdate()
         tyblue "***************即将开始更新已安装软件***************"
         yellow "更新过程中若有问话/对话框，如果看不懂，优先选择yes/y/第一个选项"
         yellow "按回车键继续。。。"
-        read rubbish
+        read -s rubbish
         yum -y update
         apt -y dist-upgrade
         apt -y --purge autoremove
@@ -695,14 +694,14 @@ install_bbr()
                 red "内存过小，更换最新版内核可能无法开机"
             fi
             yellow "按回车键以继续。。。"
-            read rubbish
+            read -s rubbish
             yellow "此操作将会更换最新内核，并开启bbr"
             yellow "若最新版内核安装失败，可以尝试："
             yellow "1.更换Ubuntu系统"
             yellow "2.更换更新版本的系统"
             yellow "3.选择2选项，或者使用bbr2/bbrplus"
             yellow "按回车键以继续。。。"
-            read rubbish
+            read -s rubbish
             sed -i '/net.core.default_qdisc/d' /etc/sysctl.conf
             sed -i '/net.ipv4.tcp_congestion_control/d' /etc/sysctl.conf
             echo 'net.core.default_qdisc = fq' >> /etc/sysctl.conf
@@ -712,7 +711,7 @@ install_bbr()
             if ! wget https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/update-kernel.sh ; then
                 red    "获取内核升级脚本失败"
                 yellow "按回车键继续或者按ctrl+c终止"
-                read rubbish
+                read -s rubbish
             fi
             chmod +x update-kernel.sh
             ./update-kernel.sh
@@ -737,7 +736,7 @@ install_bbr()
                 if ! wget https://github.com/teddysun/across/raw/master/bbr.sh ; then
                     red    "获取bbr脚本失败"
                     yellow "按回车键继续或者按ctrl+c终止"
-                    read rubbish
+                    read -s rubbish
                 fi
                 chmod +x bbr.sh
                 ./bbr.sh
@@ -750,19 +749,19 @@ install_bbr()
             tyblue "*********************即将安装bbr2加速，安装完成后服务器将会重启*********************"
             tyblue "重启后，请再次选择这个选项完成bbr2剩余部分安装(开启bbr和ECN)"
             yellow "按回车键以继续。。。。"
-            read rubbish
+            read -s rubbish
             rm -rf bbr2.sh
             if [ $release == ubuntu ] || [ $release == debian ]; then
                 if ! wget https://github.com/yeyingorg/bbr2.sh/raw/master/bbr2.sh ; then
                     red    "获取bbr2脚本失败"
                     yellow "按回车键继续或者按ctrl+c终止"
-                    read rubbish
+                    read -s rubbish
                 fi
             else
                 if ! wget https://github.com/jackjieYYY/bbr2/raw/master/bbr2.sh ; then
                     red    "获取bbr2脚本失败"
                     yellow "按回车键继续或者按ctrl+c终止"
-                    read rubbish
+                    read -s rubbish
                 fi
             fi
             chmod +x bbr2.sh
@@ -774,7 +773,7 @@ install_bbr()
             if ! wget "https://raw.githubusercontent.com/chiakge/Linux-NetSpeed/master/tcp.sh" ; then
                 red    "获取bbrplus脚本失败"
                 yellow "按回车键继续或者按ctrl+c终止"
-                read rubbish
+                read -s rubbish
             fi
             chmod +x tcp.sh
             ./tcp.sh
@@ -799,30 +798,25 @@ setsshd()
     tyblue "安装可能需要比较长的时间(5-40分钟)"
     tyblue "如果和ssh断开连接将会很麻烦"
     tyblue "设置ssh连接超时时间将大大降低断连可能性"
-    yellow "注：升级系统后ssh配置文件将会恢复默认"
     tyblue "*****************************************"
-    ifsetsshd=9
-    while [ "$ifsetsshd" != "y" -a "$ifsetsshd" != "n" ]
+    choice=""
+    while [ "$choice" != "y" -a "$choice" != "n" ]
     do
         tyblue "是否设置ssh连接超时时间？(y/n)"
-        read ifsetsshd
+        read choice
     done
-    case "$ifsetsshd" in
-        y)
-            echo ' ' >> /etc/ssh/sshd_config
-            echo "ClientAliveInterval 30" >> /etc/ssh/sshd_config
-            echo "ClientAliveCountMax 60" >> /etc/ssh/sshd_config
-            echo "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" >> /etc/ssh/sshd_config
-            service sshd restart
-            green  "**********************配置完成**********************"
-            tyblue "请重新进行ssh连接，然后再次运行此脚本"
-            yellow "按回车键退出。。。。"
-            read asfyerbsd
-            exit
-            ;;
-        n)
-            ;;
-    esac
+    if [ $choice == y ]; then
+        echo ' ' >> /etc/ssh/sshd_config
+        echo "ClientAliveInterval 30" >> /etc/ssh/sshd_config
+        echo "ClientAliveCountMax 60" >> /etc/ssh/sshd_config
+        echo "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" >> /etc/ssh/sshd_config
+        service sshd restart
+        green  "**********************配置完成**********************"
+        tyblue "请重新进行ssh连接，然后再次运行此脚本"
+        yellow "按回车键退出。。。。"
+        read asfyerbsd
+        exit 0
+    fi
 }
 
 
@@ -845,8 +839,6 @@ get_certs()
     esac
     /etc/nginx/sbin/nginx -s stop
 }
-
-
 
 #安装程序主体
 install_v2ray_ws_tls()
@@ -908,13 +900,13 @@ install_v2ray_ws_tls()
     if ! wget -O ${nginx_version}.tar.gz https://nginx.org/download/${nginx_version}.tar.gz ; then
         red    "获取nginx失败"
         yellow "按回车键继续或者按ctrl+c终止"
-        read rubbish
+        read -s rubbish
     fi
     tar -zxf ${nginx_version}.tar.gz
     if ! wget -O ${openssl_version}.tar.gz https://www.openssl.org/source/${openssl_version}.tar.gz ; then
         red    "获取openssl失败"
         yellow "按回车键继续或者按ctrl+c终止"
-        read rubbish
+        read -s rubbish
     fi
     tar -zxf ${openssl_version}.tar.gz
     cd ${openssl_version}
@@ -945,25 +937,20 @@ install_v2ray_ws_tls()
     rm -rf ${nginx_version}
 ##安装nignx完成
 
-
+#安装acme.sh
     curl https://get.acme.sh | sh
     ~/.acme.sh/acme.sh --upgrade --auto-upgrade
-    get_certs $domain $domainconfig
+
+
+    configtls $domain $domainconfig $pretend
+    get_base_information
     bash <(curl -L -s https://install.direct/go.sh)
     bash <(curl -L -s https://install.direct/go.sh)
     service v2ray stop
-
-
-##获取端口、id和path
-    get_base_information
-##配置nginx
-    configtls $domain $domainconfig $pretend
-##配置v2ray文件
     config_v2ray_vmess
-
-    get_web $domain $pretend
-
     service v2ray start
+
+
     /etc/nginx/sbin/nginx
     curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1   #激活tcp_fast_open
     curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1
@@ -1137,7 +1124,6 @@ get_web()
         mkdir /etc/nginx/html/$1
         if ! wget -P /etc/nginx/html/$1 https://github.com/kirin10000/V2ray-WebSocket-TLS-Web-setup-script/raw/master/Website-Template.zip ; then
             red    "获取网站模板失败"
-            red    "你的服务器貌似没联网，或不支持ipv4"
             yellow "按回车键继续或者按ctrl+c终止"
             read asfyerbsd
         fi
@@ -1146,100 +1132,6 @@ get_web()
     fi
 }
 
-#使用vmess作为底层协议
-back_to_vmess()
-{
-    if_back_to_vmess=""
-    while [ "$if_back_to_vmess" != "y" -a "$if_back_to_vmess" != "n" ]
-    do
-        tyblue "返回vmess作为底层协议?(y/n)"
-        read if_back_to_vmess
-    done
-    if [ $if_back_to_vmess == "n" ]; then
-        exit 0;
-    fi
-    get_info
-    v2id=`cat /proc/sys/kernel/random/uuid`
-    config_v2ray_vmess
-    service v2ray restart
-    green "配置完成！！！"
-    green "用户ID：$v2id"
-}
-
-#使用socks作为底层协议
-turn_to_socks()
-{
-    tyblue "此操作将会把底层协议修改为socks(5)"
-    tyblue "关于这么做的意义，参考https://github.com/v2ray/discussion/issues/513"
-    if_turn_to_socks="45"
-    while [ "$if_turn_to_socks" != "y" -a "$if_turn_to_socks" != "n" ]
-    do
-        tyblue "是否要继续?(y/n)"
-        read if_turn_to_socks
-    done
-    if [ $if_turn_to_socks == "n" ]; then
-        exit 0;
-    fi
-    get_info
-    config_v2ray_socks
-    service v2ray restart
-    green  "配置完成！！！"
-    tyblue "将下面一段文字复制下来，保存到文本文件中"
-    tyblue "将“你的域名”四个字修改为你的其中一个域名(保留引号)，即原配置中“地址”一栏怎么填，这里就怎么填"
-    tyblue "并将文本文件重命名为config.json"
-    tyblue "然后在V2RayN/V2RayNG中，选择导入自定义配置，选择config.json"
-    yellow "******************以下是文本******************"
-cat <<EOF
-{
-  "log": {
-    "access": "",
-    "error": "",
-    "loglevel": "warning"
-  },
-  "inbounds": [
-    {
-      "listen": "127.0.0.1",
-      "port": 10808,
-      "protocol": "socks",
-      "sniffing": {
-        "enabled": true,
-        "destOverride": ["http", "tls"]
-      },
-      "settings": {
-        "auth": "noauth",
-        "userLevel": 10,
-        "udp": true
-      }
-    }
-  ],
-  "outbounds": [
-    {
-      "protocol": "socks",
-      "settings": {
-        "servers": [
-          {
-            "address": "你的域名",
-            "level": 10,
-            "port": 443
-          }
-        ]
-      },
-      "streamSettings": {
-        "network": "ws",
-        "security": "tls",
-        "wsSettings": {
-          "path": "$path"
-        }
-      },
-      "mux": {
-        "enabled": true,
-        "concurrency": 8
-      }
-    }
-  ]
-}
-EOF
-}
 
 #开始菜单
 start_menu()
@@ -1308,23 +1200,15 @@ start_menu()
         2)
             ;;
         3)
+            apt -y -f install
             install_bbr
             ;;
-        14)
-            echo
-            yellow "尝试修复退格键异常问题，退格键正常请不要修复"
-            yellow "按回车键继续或按Ctrl+c退出"
-            read -s rubbish
-            if stty -a | grep -q 'erase = ^?' ; then
-                stty erase '^H'
-            elif stty -a | grep -q 'erase = ^H' ; then
-                stty erase '^?'
+        4)
+            if ! bash <(curl -L -s https://install.direct/go.sh) ; then
+                yellow "v2ray更新失败"
             fi
-            green "修复完成！！"
-            sleep 1s
-            start_menu
             ;;
-        3)
+        5)
             choice=""
             while [ "$choice" != "y" -a "$choice" != "n" ]
             do
@@ -1335,25 +1219,27 @@ start_menu()
                 exit 0
             fi
             remove_v2ray_nginx
-            green  "v2ray-WebSocket(ws)+TLS(1.3)+Web已删除"
+            green  "v2ray-WebSocket+TLS+Web已删除"
             ;;
-        4)
+        6)
             /etc/nginx/sbin/nginx -s stop
             service v2ray stop
             sleep 1s
             service v2ray start
             /etc/nginx/sbin/nginx
             curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1   #激活tcp_fast_open
-            curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1
             green  "重启完成"
             ;;
-        5)
+        7)
+            /etc/nginx/sbin/nginx -s stop
+            service v2ray stop
+            green  "v2ray-WebSocket+TLS+Web已停止"
+            ;;
+        8)
+            get_base_information
             readDomain
             readTlsConfig
-            get_certs
-            get_info
-            configtls
-            get_web
+            configtls $domain $domainconfig $pretend
             /etc/nginx/sbin/nginx
             green "重置域名完成！！"
             case "$domainconfig" in
@@ -1371,7 +1257,7 @@ start_menu()
                 tyblue "将v.qq.com修改为你要镜像的网站"
             fi
             ;;
-        6)
+        9)
             readDomain
             get_base_information
             new_domain $domain $domainconfig $pretend
@@ -1391,61 +1277,142 @@ start_menu()
                 tyblue "将v.qq.com修改为你要镜像的网站"
             fi
             ;;
-        7)
-            if [ ! -e /etc/v2ray/config.json ] || [ ! -e /etc/nginx ] ; then
-                red "请先安装V2Ray-WebSocket(ws)+TLS(1.3)+Web！！"
+        10)
+            ;;
+        11)
+            if [ $is_installed == 0 ] ; then
+                red "请先安装V2Ray-WebSocket+TLS+Web！！"
                 exit 1;
             fi
+            get_base_information
+            choice=""
             if grep -q "id" /etc/v2ray/config.json ; then
-                turn_to_socks
+                while [ "$choice" != "y" -a "$choice" != "n" ]
+                do
+                    tyblue "返回vmess作为底层协议?(y/n)"
+                    read choice
+                done
+                if [ $choice == y ]; then
+                    v2id=`cat /proc/sys/kernel/random/uuid`
+                    config_v2ray_vmess
+                    service v2ray restart
+                    green "配置完成！！！"
+                    green "用户ID：$v2id"
+                fi
             else
-                back_to_vmess
+                tyblue "此操作将会把底层协议修改为socks(5)"
+                tyblue "关于这么做的意义，参考https://github.com/v2ray/discussion/issues/513"
+                while [ "$choice" != "y" -a "$choice" != "n" ]
+                do
+                    tyblue "是否要继续?(y/n)"
+                    read choice
+                done
+                if [ $choice == y ]; then
+                    config_v2ray_socks
+                    service v2ray restart
+                    green  "配置完成！！！"
+                    tyblue "将下面一段文字复制下来，保存到文本文件中"
+                    tyblue "将“你的域名”四个字修改为你的其中一个域名(保留引号)，即原配置中“地址”一栏怎么填，这里就怎么填"
+                    tyblue "并将文本文件重命名为config.json"
+                    tyblue "然后在V2RayN/V2RayNG中，选择导入自定义配置，选择config.json"
+                    yellow "******************以下是文本******************"
+cat <<EOF
+{
+  "log": {
+    "access": "",
+    "error": "",
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "listen": "127.0.0.1",
+      "port": 10808,
+      "protocol": "socks",
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls"]
+      },
+      "settings": {
+        "auth": "noauth",
+        "userLevel": 10,
+        "udp": true
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "socks",
+      "settings": {
+        "servers": [
+          {
+            "address": "你的域名",
+            "level": 10,
+            "port": 443
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "$path"
+        }
+      },
+      "mux": {
+        "enabled": true,
+        "concurrency": 8
+      }
+    }
+  ]
+}
+EOF
+                fi
             fi
             ;;
-        8)
-            if [ ! -e /etc/v2ray/config.json ] ; then
-                red "请先安装V2Ray-WebSocket(ws)+TLS(1.3)+Web！！"
+        12)
+            if [ $is_installed == 0 ] ; then
+                red "请先安装V2Ray-WebSocket+TLS+Web！！"
                 exit 1;
             fi
-            if ! grep -q "id" /etc/v2ray/config.json ; then
+            get_base_information
+            if [ "$v2id" == "" ] ; then
                 red "socks模式没有ID！！"
                 exit 1;
             fi
-            get_info
             tyblue "您现在的ID是：$v2id"
-            if_change_id="45"
-            while [ "$if_change_id" != "y" -a "$if_change_id" != "n" ]
+            choice=""
+            while [ "$choice" != "y" -a "$choice" != "n" ]
             do
                 tyblue "是否要继续?(y/n)"
-                read if_change_id
+                read choice
             done
-            if [ $if_change_id == "n" ]; then
+            if [ $choice == "n" ]; then
                 exit 0;
             fi
-            tyblue "*****************请输入新的ID*****************"
-            read new_v2id
-            sed -i s/"$v2id"/"$new_v2id"/ /etc/v2ray/config.json
+            tyblue "-------------请输入新的ID-------------"
+            read v2id
+            config_v2ray_vmess
             service v2ray restart
             green "更换成功！！"
-            green "新ID：$new_v2id"
+            green "新ID：$v2id"
             ;;
-        9)
-            if [ ! -e /etc/v2ray/config.json ] || [ ! -e /etc/nginx ] ; then
-                red "请先安装V2Ray-WebSocket(ws)+TLS(1.3)+Web！！"
+        13)
+            if [ $is_installed == 0 ] ; then
+                red "请先安装V2Ray-WebSocket+TLS+Web！！"
                 exit 1;
             fi
-            get_info
+            get_base_information
             tyblue "您现在的path是：$path"
-            if_change_path="45"
-            while [ "$if_change_path" != "y" -a "$if_change_path" != "n" ]
+            choice=""
+            while [ "$choice" != "y" -a "$choice" != "n" ]
             do
                 tyblue "是否要继续?(y/n)"
-                read if_change_path
+                read choice
             done
-            if [ $if_change_path == "n" ]; then
+            if [ $choice == "n" ]; then
                 exit 0;
             fi
-            tyblue "*****************请输入新的path(带\"/\")*****************"
+            tyblue "---------------请输入新的path(带\"/\")---------------"
             read new_path
             sed -i s#"$path"#"$new_path"# /etc/v2ray/config.json
             sed -i s#"$path"#"$new_path"# /etc/nginx/conf.d/v2ray.conf
@@ -1456,18 +1423,22 @@ start_menu()
             green "更换成功！！"
             green "新path：$new_path"
             ;;
-        10)
-            apt -y -f install
-            install_bbr
-            ;;
-        11)
-            change_dns
-            ;;
-        12)
-            if ! bash <(curl -L -s https://install.direct/go.sh) ; then
-                red    "你的服务器貌似没联网，或不支持ipv4，请检查网络连接"
-                yellow "v2ray更新失败"
+        14)
+            echo
+            yellow "尝试修复退格键异常问题，退格键正常请不要修复"
+            yellow "按回车键继续或按Ctrl+c退出"
+            read -s rubbish
+            if stty -a | grep -q 'erase = ^?' ; then
+                stty erase '^H'
+            elif stty -a | grep -q 'erase = ^H' ; then
+                stty erase '^?'
             fi
+            green "修复完成！！"
+            sleep 1s
+            start_menu
+            ;;
+        15)
+            change_dns
             ;;
     esac
 }
