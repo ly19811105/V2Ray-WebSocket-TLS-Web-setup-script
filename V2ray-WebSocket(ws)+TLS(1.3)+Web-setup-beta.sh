@@ -527,7 +527,7 @@ doupdate()
         esac
     }
     echo -e "\n\n\n"
-    tyblue "*******************是否将更新系统组件？*******************"
+    tyblue "-----------------------是否将更新系统组件？-----------------------"
     if [ "$release" == "ubuntu" ]; then
         green  "1.更新已安装软件，并升级系统(仅对ubuntu有效)"
         green  "2.仅更新已安装软件"
@@ -544,7 +544,7 @@ doupdate()
         green  "1.仅更新已安装软件"
         red    "2.不更新"
     fi
-    tyblue "**********************************************************"
+    tyblue "------------------------------------------------------------------"
     echo
     choice=""
     while [ "$choice" != "1" -a "$choice" != "2" -a "$choice" != "3" ]
@@ -554,7 +554,7 @@ doupdate()
     if [[ "$release" == "ubuntu" && "$choice" == "1" ]] ; then
         updateSystem
     elif [[ "$release" == "ubuntu" && "$choice" == "2" || "$release" == "centos" && "$choice" == "1" ]]; then
-        tyblue "***************即将开始更新已安装软件***************"
+        tyblue "----------------即将开始更新已安装软件----------------"
         yellow "更新过程中若有问话/对话框，如果看不懂，优先选择yes/y/第一个选项"
         yellow "按回车键继续。。。"
         read -s rubbish
@@ -647,39 +647,39 @@ install_bbr()
         last_v=${last_v%%-*}
     fi
     echo -e "\n\n\n"
-    tyblue "******************请选择要使用的bbr版本******************"
-    green  "1.升级最新版内核并启用bbr(推荐)"
+    tyblue "------------------请选择要使用的bbr版本------------------"
+    green  "  1. 升级最新版内核并启用bbr(推荐)"
     if version_ge $kernel_version 4.9 ; then
         tyblue "2.启用bbr"
     else
         tyblue "2.升级内核启用bbr"
     fi
-    yellow "3.启用bbr2(需更换第三方内核)"
-    yellow "4.启用bbrplus/魔改版bbr/锐速(需更换第三方内核)"
-    tyblue "5.卸载多余内核"
-    tyblue "6.退出bbr安装"
-    tyblue "******************关于安装bbr加速的说明******************"
-    green  "bbr加速可以大幅提升网络速度，建议安装"
-    green  "新版本内核的bbr比旧版强得多，最新版本内核的bbr强于bbrplus等"
-    yellow "更换第三方内核可能造成系统不稳定，甚至无法开机"
-    yellow "更换内核需重启才能生效"
-    yellow "重启后，请再次运行此脚本完成剩余安装"
-    tyblue "*********************************************************"
-    tyblue "当前内核版本：${kernel_version}"
-    tyblue "最新内核版本：${last_v}"
-    tyblue "当前内核是否支持bbr："
+    yellow "  3. 启用bbr2(需更换第三方内核)"
+    yellow "  4. 启用bbrplus/魔改版bbr/锐速(需更换第三方内核)"
+    tyblue "  5. 卸载多余内核"
+    tyblue "  6. 退出bbr安装"
+    tyblue "------------------关于安装bbr加速的说明------------------"
+    green  "  bbr加速可以大幅提升网络速度，建议安装"
+    green  "  新版本内核的bbr比旧版强得多，最新版本内核的bbr强于bbrplus等"
+    yellow "  更换第三方内核可能造成系统不稳定，甚至无法开机"
+    yellow "  更换内核需重启才能生效"
+    yellow "  重启后，请再次运行此脚本完成剩余安装"
+    tyblue "---------------------------------------------------------"
+    tyblue "  当前内核版本：${kernel_version}"
+    tyblue "  最新内核版本：${last_v}"
+    tyblue "  当前内核是否支持bbr："
     if version_ge $kernel_version 4.9 ; then
-        green "是"
+        green "     是"
     else
-        red "否，需升级内核"
+        red "     否，需升级内核"
     fi
-    tyblue "bbr启用状态："
+    tyblue "  bbr启用状态："
     if sysctl net.ipv4.tcp_congestion_control | grep -q bbr ; then
         local bbr_info=`sysctl net.ipv4.tcp_congestion_control`
         bbr_info=${bbr_info#*=}
-        green "正在使用：${bbr_info}"
+        green "   正在使用：${bbr_info}"
     else
-        red "bbr未启用！！"
+        red "   bbr未启用！！"
     fi
     choice=""
     while [ "$choice" != "1" -a "$choice" != "2" -a "$choice" != "3" -a "$choice" != "4" -a "$choice" != "5" -a "$choice" != "6" ]
@@ -720,7 +720,7 @@ install_bbr()
                 red "如果刚安装完内核，请先重启"
                 red "如果重启仍然无效，请尝试选择2选项"
             else
-                green "********************bbr已安装********************"
+                green "--------------------bbr已安装--------------------"
             fi
             install_bbr
             ;;
@@ -741,12 +741,12 @@ install_bbr()
                 chmod +x bbr.sh
                 ./bbr.sh
             else
-                green "********************bbr已安装********************"
+                green "--------------------bbr已安装--------------------"
             fi
             install_bbr
             ;;
         3)
-            tyblue "*********************即将安装bbr2加速，安装完成后服务器将会重启*********************"
+            tyblue "--------------------即将安装bbr2加速，安装完成后服务器将会重启--------------------"
             tyblue "重启后，请再次选择这个选项完成bbr2剩余部分安装(开启bbr和ECN)"
             yellow "按回车键以继续。。。。"
             read -s rubbish
@@ -780,6 +780,17 @@ install_bbr()
             install_bbr
             ;;
         5)
+            tyblue "该操作将会卸载除现在正在使用的内核外的其余内核"
+            tyblue "您正在使用的内核是：$(uname -r)"
+            choice=""
+            while [[ "$choice" != "y" && "$choice" != "n" ]]
+            do
+                read -p "是否继续？(y/n)" choice
+            done
+            if [ $choice == y ]; then
+                remove_other_kernel
+            fi
+            install_bbr
             ;;
     esac
     rm -rf bbr.sh
@@ -789,16 +800,53 @@ install_bbr()
     rm -rf install_bbr.log*
 }
 
+#卸载多余内核
+remove_other_kernel()
+{
+    local kernel_list_image=($(dpkg --list | grep 'linux-image' | awk '{print $2}'))
+    local kernel_list_modules=($(dpkg --list | grep 'linux-modules' | awk '{print $2}'))
+    local kernel_now=`uname -r`
+    local ok_install=0
+    for ((i=${#kernel_list_image[@]}-1;i>=0;i--))
+    do
+        if [[ "${kernel_list_image[$i]}" =~ "$kernel_now" ]] ; then     
+            kernel_list_image[$i]=""
+            ((ok_install++))
+        fi
+    done
+    if [ "$ok_install" -lt "1" ] ; then
+        red "未发现正在使用的内核，可能已经被卸载"
+        yellow "按回车键继续。。。"
+        read -s rubbish
+        return 1
+    fi
+    ok_install=0
+    for ((i=${#kernel_list_modules[@]}-1;i>=0;i--))
+    do
+        if [[ "${kernel_list_modules[$i]}" =~ "$kernel_now" ]] ; then
+            kernel_list_modules[$i]=""
+            ((ok_install++))
+        fi
+    done
+    if [ "$ok_install" -lt "1" ] ; then
+        red "未发现正在使用的内核，可能已经被卸载"
+        yellow "按回车键继续。。。"
+        read -s rubbish
+        return 1
+    fi
+    apt -y purge ${kernel_list_image[@]} ${kernel_list_modules[@]}
+}
+
 
 #配置sshd
 setsshd()
 {
     echo
-    tyblue "*****************************************"
+    tyblue "------------------------------------------"
     tyblue "安装可能需要比较长的时间(5-40分钟)"
     tyblue "如果和ssh断开连接将会很麻烦"
     tyblue "设置ssh连接超时时间将大大降低断连可能性"
-    tyblue "*****************************************"
+    tyblue "------------------------------------------"
     choice=""
     while [ "$choice" != "y" -a "$choice" != "n" ]
     do
@@ -811,7 +859,7 @@ setsshd()
         echo "ClientAliveCountMax 60" >> /etc/ssh/sshd_config
         echo "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" >> /etc/ssh/sshd_config
         service sshd restart
-        green  "**********************配置完成**********************"
+        green  "----------------------配置完成----------------------"
         tyblue "请重新进行ssh连接，然后再次运行此脚本"
         yellow "按回车键退出。。。。"
         read asfyerbsd
@@ -955,7 +1003,7 @@ install_v2ray_ws_tls()
     curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1   #激活tcp_fast_open
     curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1
     echo -e "\n\n\n"
-    tyblue "*************安装完成*************"
+    tyblue "-------------------安装完成-------------------"
     if [ $domainconfig -eq 1  ]; then
         tyblue "地址：www.${domain}或${domain}"
     else
@@ -970,7 +1018,7 @@ install_v2ray_ws_tls()
     tyblue "伪装域名：空"
     tyblue "路径：${path}"
     tyblue "底层传输安全：tls"
-    tyblue "**********************************"
+    tyblue "----------------------------------------------"
     yellow "注意事项：如重新启动服务器，请执行/etc/nginx/sbin/nginx"
     yellow "          或运行脚本，选择重启服务选项"
     echo
@@ -1138,43 +1186,44 @@ start_menu()
 {
     clear
     tyblue "-------------- V2Ray WebSocket(ws)+TLS(1.3)+Web 搭建/管理脚本--------------"
-    tyblue "官网：https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script"
+    tyblue "  官网：https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script"
     tyblue "---------------------------------------------------------------------------"
-    yellow "此脚本需要一个解析到本服务器的域名!!!!"
-    tyblue "推荐服务器系统使用Ubuntu最新版"
-    yellow "部分ssh工具会出现退格键无法使用问题，建议先保证退格键正常，再安装"
-    yellow "测试退格键正常方法：按一下退格键，不会出现奇怪的字符即为正常"
-    yellow "若退格键异常可以选择选项16修复"
+    yellow "  此脚本需要一个解析到本服务器的域名!!!!"
+    tyblue "  推荐服务器系统使用Ubuntu最新版"
+    yellow "  部分ssh工具会出现退格键无法使用问题，建议先保证退格键正常，再安装"
+    yellow "  测试退格键正常方法：按一下退格键，不会出现奇怪的字符即为正常"
+    yellow "  若退格键异常可以选择选项14修复"
     tyblue "---------------------------------------------------------------------------"
-    tyblue "-----------安装/升级/卸载-----------"
+    echo
+    tyblue "  -----------安装/升级/卸载-----------"
     if [ $is_installed == 0 ]; then
-        green  "1.安装V2Ray-WebSocket+TLS+Web"
+        green  "     1. 安装V2Ray-WebSocket+TLS+Web"
     else
-        green  "1.重新安装V2Ray-WebSocket+TLS+Web"
+        green  "     1. 重新安装V2Ray-WebSocket+TLS+Web"
     fi
-    green  "2.升级V2Ray-WebSocket+TLS+Web"
-    tyblue "3.仅安装bbr(包含bbr2/bbrplus/魔改版bbr/锐速)"
-    tyblue "4.仅升级V2Ray"
-    red    "5.卸载V2Ray-WebSocket+TLS+Web"
-    tyblue "--------------启动/停止-------------"
-    tyblue "6.重启/启动V2Ray-WebSocket+TLS+Web(对于玄学断连/掉速有奇效)"
-    tyblue "7.停止V2Ray-WebSocket+TLS+Web"
-    tyblue "----------------管理----------------"
-    tyblue "8.重置域名和TLS配置"
-    tyblue "  (会覆盖原有域名配置，配置过程中域名输错了造成V2Ray无法启动可以用此选项修复)"
-    tyblue "9.添加域名"
-    tyblue "10.删除域名"
+    green  "     2. 升级V2Ray-WebSocket+TLS+Web"
+    tyblue "     3. 仅安装bbr(包含升级内核/安装bbr/bbr2/bbrplus/魔改版bbr/锐速)"
+    tyblue "     4. 仅升级V2Ray"
+    red    "     5. 卸载V2Ray-WebSocket+TLS+Web"
+    tyblue "  --------------启动/停止-------------"
+    tyblue "     6. 重启/启动V2Ray-WebSocket+TLS+Web(对于玄学断连/掉速有奇效)"
+    tyblue "     7. 停止V2Ray-WebSocket+TLS+Web"
+    tyblue "  ----------------管理----------------"
+    tyblue "     8. 重置域名和TLS配置"
+    tyblue "        (会覆盖原有域名配置，安装过程中域名输错了造成V2Ray无法启动可以用此选项修复)"
+    tyblue "     9. 添加域名"
+    tyblue "    10. 删除域名"
     if [ $is_installed == 1 ] && ! grep -q "id" /etc/v2ray/config.json >> /dev/null 2>&1 ; then
-        tyblue "11.返回vmess作为底层传输协议"
+        tyblue "    11. 返回vmess作为底层传输协议"
     else
-        tyblue "11.使用socks(5)作为底层传输协议(降低计算量、延迟)(beta)"
+        tyblue "    11. 使用socks(5)作为底层传输协议(降低计算量、延迟)(beta)"
     fi
-    tyblue "12.查看/修改用户ID(id)"
-    tyblue "13.查看/修改路径(path)"
-    tyblue "----------------其它----------------"
-    tyblue "14.尝试修复退格键无法使用的问题"
-    tyblue "15.修改dns"
-    yellow "16.退出脚本"
+    tyblue "    12. 查看/修改用户ID(id)"
+    tyblue "    13. 查看/修改路径(path)"
+    tyblue "  ----------------其它----------------"
+    tyblue "    14. 尝试修复退格键无法使用的问题"
+    tyblue "    15. 修改dns"
+    yellow "    16. 退出脚本"
     echo
     choice=""
     while [[ "$choice" != "1" && "$choice" != "2" && "$choice" != "3" && "$choice" != "4" && "$choice" != "5" && "$choice" != "6" && "$choice" != "7" && "$choice" != "8" && "$choice" != "9" && "$choice" != "10" && "$choice" != "11" && "$choice" != "12" && "$choice" != "13" && "$choice" != "14" && "$choice" != "15" && "$choice" != "16" ]]
@@ -1262,6 +1311,7 @@ start_menu()
             get_base_information
             new_domain $domain $domainconfig $pretend
             green "添加域名完成！！"
+            /etc/nginx/sbin/nginx
             case "$domainconfig" in
                 1)
                     green "现在服务器地址可以填写原来的域名和www.${domain} ${domain}"
@@ -1315,7 +1365,7 @@ start_menu()
                     tyblue "将“你的域名”四个字修改为你的其中一个域名(保留引号)，即原配置中“地址”一栏怎么填，这里就怎么填"
                     tyblue "并将文本文件重命名为config.json"
                     tyblue "然后在V2RayN/V2RayNG中，选择导入自定义配置，选择config.json"
-                    yellow "******************以下是文本******************"
+                    yellow "---------------以下是文本---------------"
 cat <<EOF
 {
   "log": {
