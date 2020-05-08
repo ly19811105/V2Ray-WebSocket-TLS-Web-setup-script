@@ -530,7 +530,7 @@ remove_kernel()
         fi
     fi
     ok_install=0
-    for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
+    for ((i=${#kernel_list_image[@]}-1;i>=0;i--))
     do
         if [[ "${kernel_list_image[$i]}" == "$kernel_image" ]] ; then     
             kernel_list_image[$i]=""
@@ -542,7 +542,7 @@ remove_kernel()
         return 1
     fi
     ok_install=0
-    for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
+    for ((i=${#kernel_list_modules[@]}-1;i>=0;i--))
     do
         if [[ "${kernel_list_modules[$i]}" == "$kernel_modules" ]] ; then     
             kernel_list_modules[$i]=""
