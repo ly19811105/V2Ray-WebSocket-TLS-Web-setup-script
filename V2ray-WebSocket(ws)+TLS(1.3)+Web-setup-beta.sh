@@ -650,9 +650,9 @@ install_bbr()
     tyblue "------------------请选择要使用的bbr版本------------------"
     green  "  1. 升级最新版内核并启用bbr(推荐)"
     if version_ge $kernel_version 4.9 ; then
-        tyblue "2.启用bbr"
+        tyblue "  2. 启用bbr"
     else
-        tyblue "2.升级内核启用bbr"
+        tyblue "  2. 升级内核启用bbr"
     fi
     yellow "  3. 启用bbr2(需更换第三方内核)"
     yellow "  4. 启用bbrplus/魔改版bbr/锐速(需更换第三方内核)"
@@ -835,6 +835,7 @@ remove_other_kernel()
         return 1
     fi
     apt -y purge ${kernel_list_image[@]} ${kernel_list_modules[@]}
+    green "-------------------卸载完成-------------------"
 }
 
 
@@ -1195,7 +1196,7 @@ start_menu()
     yellow "  若退格键异常可以选择选项14修复"
     tyblue "---------------------------------------------------------------------------"
     echo
-    tyblue "  -----------安装/升级/卸载-----------"
+    tyblue " -----------安装/升级/卸载-----------"
     if [ $is_installed == 0 ]; then
         green  "     1. 安装V2Ray-WebSocket+TLS+Web"
     else
@@ -1205,10 +1206,10 @@ start_menu()
     tyblue "     3. 仅安装bbr(包含升级内核/安装bbr/bbr2/bbrplus/魔改版bbr/锐速)"
     tyblue "     4. 仅升级V2Ray"
     red    "     5. 卸载V2Ray-WebSocket+TLS+Web"
-    tyblue "  --------------启动/停止-------------"
+    tyblue " --------------启动/停止-------------"
     tyblue "     6. 重启/启动V2Ray-WebSocket+TLS+Web(对于玄学断连/掉速有奇效)"
     tyblue "     7. 停止V2Ray-WebSocket+TLS+Web"
-    tyblue "  ----------------管理----------------"
+    tyblue " ----------------管理----------------"
     tyblue "     8. 重置域名和TLS配置"
     tyblue "        (会覆盖原有域名配置，安装过程中域名输错了造成V2Ray无法启动可以用此选项修复)"
     tyblue "     9. 添加域名"
@@ -1220,7 +1221,7 @@ start_menu()
     fi
     tyblue "    12. 查看/修改用户ID(id)"
     tyblue "    13. 查看/修改路径(path)"
-    tyblue "  ----------------其它----------------"
+    tyblue " ----------------其它----------------"
     tyblue "    14. 尝试修复退格键无法使用的问题"
     tyblue "    15. 修改dns"
     yellow "    16. 退出脚本"
