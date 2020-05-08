@@ -26,36 +26,63 @@ if [ "$EUID" != "0" ]; then
     exit 1
 fi
 
+#确保系统支持
+if command -v apt > /dev/null 2>&1 && command -v yum > /dev/null 2>&1; then
+    red "apt与yum同时存在，请卸载掉其中一个"
+    choice=""
+    while [[ "$choice" != "y" && "$choice" != "n" ]]
+    do
+        tyblue "自动卸载？(y/n)"
+        read choice
+    done
+    if [ $choice == y ]; then
+        apt -y purge yum
+        apt -y remove yum
+        yum -y remove apt
+        if command -v apt > /dev/null 2>&1 && command -v yum > /dev/null 2>&1; then
+            yellow "卸载失败，不支持的系统"
+            exit 1
+        fi
+    else
+        exit 0
+    fi
+elif ! command -v apt > /dev/null 2>&1 && ! command -v yum > /dev/null 2>&1; then
+    red "不支持的系统或apt/yum缺失"
+    exit 1
+fi
 
-if [ -f /etc/redhat-release ]; then
-    release="centos"
-elif cat /etc/issue | grep -Eqi "ubuntu"; then
+if lsb_release -a 2>&1 | grep -qi "ubuntu" || cat /etc/issue | grep -qi "ubuntu" || cat /proc/version | grep -qi "ubuntu"; then
     release="ubuntu"
-elif cat /etc/issue | grep -Eqi "debian"; then
+elif lsb_release -a 2>&1 | grep -qi "debian" || cat /etc/issue | grep -qi "debian" || cat /proc/version | grep -qi "debian" || command -v apt > /dev/null 2>&1 && ! command -v yum > /dev/null 2>&1; then
     release="debian"
-elif cat /etc/issue | grep -Eqi "centos|red hat|redhat"; then
+elif lsb_release -a 2>&1 | grep -qi "centos" || cat /etc/issue | grep -qi "centos" || cat /proc/version | grep -qi "centos"; then
     release="centos"
-elif cat /proc/version | grep -Eqi "ubuntu"; then
-    release="ubuntu"
-elif cat /proc/version | grep -Eqi "debian"; then
-    release="debian"
-elif cat /proc/version | grep -Eqi "centos|red hat|redhat"; then
-    release="centos"
-elif command -v apt > /dev/null 2>&1 && ! command -v yum > /dev/null 2>&1; then
-    release="debian"
-elif command -v yum > /dev/null 2>&1 && ! command -v apt > /dev/null 2>&1; then
-    release="centos"
+elif [ -f /etc/redhat-release ] || lsb_release -a 2>&1 | grep -Eqi "red hat|redhat" || cat /etc/issue | grep -Eqi "red hat|redhat" || cat /proc/version | grep -Eqi "red hat|redhat" || command -v yum > /dev/null 2>&1 && ! command -v apt > /dev/null 2>&1; then
+    release="redhat"
 else
     red "不支持的系统！！"
     exit 1
 fi
 
-if [ -e /etc/v2ray/config.json ] && [ -e /etc/nginx ] ; then
+#判断内存是否太小
+if [ "$(cat /proc/meminfo |grep 'MemTotal' |awk '{print $3}' | tr [A-Z] [a-z])" == "kb" ]; then
+    if [ "$(cat /proc/meminfo |grep 'MemTotal' |awk '{print $2}')" -le 400000 ]; then
+        mem_ok=0
+    else
+        mem_ok=1
+    fi
+else
+    mem_ok=2
+fi
+
+#判断是否已经安装
+if [ -e /etc/v2ray/config.json ] && [ -e /etc/nginx/conf.d/v2ray.conf ]; then
     is_installed=1
 else
     is_installed=0
 fi
 
+#系统版本
 systemVersion=`lsb_release -r --short`
 
 #版本比较函数
@@ -435,77 +462,82 @@ EOF
 }
 
 
-#升级系统
-updateSystem()
-{
-    echo -e "\n\n\n"
-    tyblue "********************请选择升级系统版本********************"
-    tyblue "1.最新beta版(现在是20.04)(2020.04)"
-    tyblue "2.最新稳定版(现在是20.04)(2020.04)"
-    tyblue "3.最新LTS版(现在是20.04)(2020.04)"
-    tyblue "*************************版本说明*************************"
-    tyblue "beta版：就是测试版啦"
-    tyblue "稳定版：就是稳定版啦"
-    tyblue "LTS版：长期支持版本，可以理解为超级稳定版"
-    tyblue "*************************注意事项*************************"
-    tyblue "1.升级系统仅对ubuntu有效，非ubuntu系统将仅更新软件包"
-    yellow "2.升级系统可能需要15分钟或更久"
-    yellow "3.升级系统完成后将会重启，重启后，请再次运行此脚本完成剩余安装"
-    yellow "4.有的时候不能一次性更新到所选择的版本，可能要更新两次，所以更新完"
-    yellow "  第一次重启后，若还未升级到选定版本，请再选择相同的升级版本"
-    yellow "5.升级过程中若有问话/对话框，如果看不懂，优先选择yes/y/第一个选项"
-    yellow "6.若升级过程中与ssh断开连接，建议重置系统"
-    yellow "7.升级系统后ssh超时时间将会恢复默认"
-    tyblue "8.ubuntu20.04暂不支持bbr2"
-    tyblue "**********************************************************"
-    green  "您现在的系统版本是$systemVersion"
-    tyblue "**********************************************************"
-    echo
-    updateconfig=5
-    while [ "$updateconfig" != "1" -a "$updateconfig" != "2" -a "$updateconfig" != "3" ]
-    do
-        read -p "您的选择是：" updateconfig
-    done
-    yum -y update
-    apt -y dist-upgrade
-    apt -y --purge autoremove
-    apt clean
-    yum -y autoremove
-    yum clean all
-    echo '[DEFAULT]' > /etc/update-manager/release-upgrades
-    echo 'Prompt=lts' >> /etc/update-manager/release-upgrades
-    case "$updateconfig" in
-        1)
-            do-release-upgrade -d
-            do-release-upgrade -d
-            do-release-upgrade
-            do-release-upgrade
-            sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
-            do-release-upgrade -d
-            do-release-upgrade
-            ;;
-        2)
-            sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
-            do-release-upgrade
-            do-release-upgrade
-            ;;
-        3)
-            do-release-upgrade
-            do-release-upgrade
-            ;;
-    esac
-}
 
 
 #升级系统组件
 doupdate()
 {
+    #升级系统
+    updateSystem()
+    {
+        echo -e "\n\n\n"
+        tyblue "********************请选择升级系统版本********************"
+        tyblue "1.最新beta版(现在是20.04)(2020.04)"
+        tyblue "2.最新稳定版(现在是20.04)(2020.04)"
+        tyblue "3.最新LTS版(现在是20.04)(2020.04)"
+        tyblue "*************************版本说明*************************"
+        tyblue "beta版：即测试版"
+        tyblue "发行版：即稳定版"
+        tyblue "LTS版：长期支持版本，可以理解为超级稳定版"
+        tyblue "*************************注意事项*************************"
+        tyblue "1.升级系统仅对ubuntu有效，非ubuntu系统将仅更新软件包"
+        yellow "2.升级系统可能需要15分钟或更久"
+        yellow "3.升级系统完成后将会重启，重启后，请再次运行此脚本完成剩余安装"
+        yellow "4.有的时候不能一次性更新到所选择的版本，可能要更新两次，所以更新完"
+        yellow "  第一次重启后，若还未升级到选定版本，请再选择相同的升级版本"
+        yellow "5.升级过程中若有问话/对话框，如果看不懂，优先选择yes/y/第一个选项"
+        yellow "6.若升级过程中与ssh断开连接，建议重置系统"
+        yellow "7.升级系统后ssh超时时间将会恢复默认"
+        tyblue "8.ubuntu20.04暂不支持bbr2"
+        tyblue "**********************************************************"
+        green  "您现在的系统版本是$systemVersion"
+        tyblue "**********************************************************"
+        echo
+        choice=""
+        while [ "$choice" != "1" -a "$choice" != "2" -a "$choice" != "3" ]
+        do
+            read -p "您的选择是：" choice
+        done
+        apt -y dist-upgrade
+        apt -y --purge autoremove
+        apt clean
+        echo '[DEFAULT]' > /etc/update-manager/release-upgrades
+        echo 'Prompt=lts' >> /etc/update-manager/release-upgrades
+        case "$choice" in
+            1)
+            do-release-upgrade -d
+            do-release-upgrade -d
+            do-release-upgrade
+            do-release-upgrade
+                sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
+            do-release-upgrade -d
+            do-release-upgrade
+                ;;
+            2)
+                sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
+            do-release-upgrade
+            do-release-upgrade
+                ;;
+            3)
+            do-release-upgrade
+            do-release-upgrade
+                ;;
+        esac
+    }
     echo -e "\n\n\n"
     tyblue "*******************是否将更新系统组件？*******************"
     if [ "$release" == "ubuntu" ]; then
         green  "1.更新已安装软件，并升级系统(仅对ubuntu有效)"
         green  "2.仅更新已安装软件"
         red    "3.不更新"
+        if [ $mem_ok == 2 ]; then
+            echo
+            yellow "如果要升级系统，请确保服务器的内存大于等于512MB"
+            yellow "否则可能无法开机"
+        elif [ $mem_ok == 0 ]; then
+            echo
+            red "检测到内存过小，升级系统可能导致无法开机"
+        fi
     else
         green  "1.仅更新已安装软件"
         red    "2.不更新"
@@ -574,37 +606,37 @@ remove_v2ray_nginx()
 }
 
 
-check_fake_version() {
-    local temp=${1##*.}
-    if [ ${temp} -eq 0 ] ; then
-        return 0
-    else
-        return 1
-    fi
-}
 
 #安装bbr
 install_bbr()
 {
+    check_fake_version() {
+        local temp=${1##*.}
+        if [ ${temp} -eq 0 ] ; then
+            return 0
+        else
+            return 1
+        fi
+    }
     if ! grep -q "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" /etc/sysctl.conf ; then
         echo ' ' >> /etc/sysctl.conf
         echo "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" >> /etc/sysctl.conf
     fi
-    kernel_version=`uname -r | cut -d - -f 1`
+    local kernel_version=`uname -r | cut -d - -f 1`
     while check_fake_version ${kernel_version} ;
     do
         kernel_version=${kernel_version%.*}
     done
-    version=$(wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/ | awk -F'\"v' '/v[0-9]/{print $2}' | cut -d '"' -f1 | cut -d '/' -f1 | sort -rV)
-    last_v=$(echo $version | cut -d ' ' -f 1)
-    if cat /etc/issue | grep -qi "ubuntu" || cat /proc/version | grep -qi "ubuntu" || cat /etc/issue | grep -Eqi "debian" || cat /proc/version | grep -Eqi "debian" ; then
-        rc_version=`uname -r | cut -d - -f 2`
+    local version=$(wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/ | awk -F'\"v' '/v[0-9]/{print $2}' | cut -d '"' -f1 | cut -d '/' -f1 | sort -rV)
+    local last_v=$(echo $version | cut -d ' ' -f 1)
+    if [ $release == ubuntu ] || [ $release == debian ] ; then
+        local rc_version=`uname -r | cut -d - -f 2`
         if [[ $rc_version =~ "rc" ]] ; then
             rc_version=${rc_version##*'rc'}
             kernel_version=${kernel_version}-rc${rc_version}
         fi
         if [[ $last_v =~ "rc" ]] ; then
-            last_v2=${last_v%%-*}
+            local last_v2=${last_v%%-*}
             if echo $version | grep -q " $last_v2 " ; then
                 last_v=$last_v2
             fi
@@ -615,16 +647,20 @@ install_bbr()
     echo -e "\n\n\n"
     tyblue "******************请选择要使用的bbr版本******************"
     green  "1.升级最新版内核并启用bbr(推荐)"
-    tyblue "2.启用bbr(如果内核不支持，将自动升级内核)"
-    yellow "3.启用bbr2(需安装第三方内核)(Ubuntu、Debian)"
-    yellow "4.启用bbr2(需安装第三方内核)(Centos)"
-    yellow "5.启用bbrplus/魔改版bbr/锐速(需安装第三方内核)"
+    if version_ge $kernel_version 4.9 ; then
+        tyblue "2.启用bbr"
+    else
+        tyblue "2.升级内核启用bbr"
+    fi
+    yellow "3.启用bbr2(需更换第三方内核)"
+    yellow "4.启用bbrplus/魔改版bbr/锐速(需更换第三方内核)"
+    tyblue "5.卸载多余内核"
     tyblue "6.退出bbr安装"
     tyblue "******************关于安装bbr加速的说明******************"
     green  "bbr加速可以大幅提升网络速度，建议安装"
     green  "新版本内核的bbr比旧版强得多，最新版本内核的bbr强于bbrplus等"
-    yellow "安装第三方内核可能造成系统不稳定，甚至无法开机"
-    yellow "安装内核需重启才能生效"
+    yellow "更换第三方内核可能造成系统不稳定，甚至无法开机"
+    yellow "更换内核需重启才能生效"
     yellow "重启后，请再次运行此脚本完成剩余安装"
     tyblue "*********************************************************"
     tyblue "当前内核版本：${kernel_version}"
@@ -637,23 +673,31 @@ install_bbr()
     fi
     tyblue "bbr启用状态："
     if sysctl net.ipv4.tcp_congestion_control | grep -q bbr ; then
-        bbr_info=`sysctl net.ipv4.tcp_congestion_control`
+        local bbr_info=`sysctl net.ipv4.tcp_congestion_control`
         bbr_info=${bbr_info#*=}
         green "正在使用：${bbr_info}"
     else
         red "bbr未启用！！"
     fi
-    bbrconfig=100
-    while [ "$bbrconfig" != "1" -a "$bbrconfig" != "2" -a "$bbrconfig" != "3" -a "$bbrconfig" != "4" -a "$bbrconfig" != "5" -a "$bbrconfig" != "6" ]
+    choice=""
+    while [ "$choice" != "1" -a "$choice" != "2" -a "$choice" != "3" -a "$choice" != "4" -a "$choice" != "5" -a "$choice" != "6" ]
     do
-        read -p "您的选择是：" bbrconfig
+        read -p "您的选择是：" choice
     done
-    case "$bbrconfig" in
+    case "$choice" in
         1)
-            yellow "此操作将会尝试安装最新内核，并开启bbr"
-            yellow "若无法安装最新版内核，可以尝试："
-            yellow "1.使用更新版本的系统"
-            yellow "2.选择2选项，或者使用bbr2/bbrplus"
+            if [ $mem_ok == 2 ]; then
+                red "请确保服务器的内存>=512MB，否则更换最新版内核可能无法开机"
+            elif [ $mem_ok == 0 ]; then 
+                red "内存过小，更换最新版内核可能无法开机"
+            fi
+            yellow "按回车键以继续。。。"
+            read rubbish
+            yellow "此操作将会更换最新内核，并开启bbr"
+            yellow "若最新版内核安装失败，可以尝试："
+            yellow "1.更换Ubuntu系统"
+            yellow "2.更换更新版本的系统"
+            yellow "3.选择2选项，或者使用bbr2/bbrplus"
             yellow "按回车键以继续。。。"
             read rubbish
             sed -i '/net.core.default_qdisc/d' /etc/sysctl.conf
@@ -664,16 +708,14 @@ install_bbr()
             rm -rf update-kernel.sh
             if ! wget https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/update-kernel.sh ; then
                 red    "获取内核升级脚本失败"
-                red    "你的服务器貌似没联网，或不支持ipv4"
-                yellow "可以尝试一下修改DNS(搭建脚本里有这个选项)"
                 yellow "按回车键继续或者按ctrl+c终止"
                 read rubbish
             fi
             chmod +x update-kernel.sh
             ./update-kernel.sh
             if ! sysctl net.ipv4.tcp_congestion_control | grep -q "bbr" ; then
-                red "开启bbr失败！！"
-                red "如果刚安装完内核，请先重启！！"
+                red "开启bbr失败"
+                red "如果刚安装完内核，请先重启"
                 red "如果重启仍然无效，请尝试选择2选项"
             else
                 green "********************bbr已安装********************"
@@ -691,8 +733,6 @@ install_bbr()
                 rm -rf bbr.sh
                 if ! wget https://github.com/teddysun/across/raw/master/bbr.sh ; then
                     red    "获取bbr脚本失败"
-                    red    "你的服务器貌似没联网，或不支持ipv4"
-                    yellow "可以尝试一下修改DNS(搭建脚本里有这个选项)"
                     yellow "按回车键继续或者按ctrl+c终止"
                     read rubbish
                 fi
@@ -706,48 +746,38 @@ install_bbr()
         3)
             tyblue "*********************即将安装bbr2加速，安装完成后服务器将会重启*********************"
             tyblue "重启后，请再次选择这个选项完成bbr2剩余部分安装(开启bbr和ECN)"
-            tyblue "目前已知支持bbr2系统：Ubuntu16.04 —— 19.10、Debian 8 9 10"
-            red    "目前已知不支持bbr2系统：Ubuntu14.04 20.04"
-            red    "警告：不支持的系统安装bbr2会导致系统崩溃(可正常安装bbr1)"
             yellow "按回车键以继续。。。。"
             read rubbish
             rm -rf bbr2.sh
-            if ! wget https://github.com/yeyingorg/bbr2.sh/raw/master/bbr2.sh ; then
-                red    "获取bbr2脚本失败"
-                red    "你的服务器貌似没联网，或不支持ipv4"
-                yellow "可以尝试一下修改DNS(搭建脚本里有这个选项)"
-                yellow "按回车键继续或者按ctrl+c终止"
-                read rubbish
+            if [ $release == ubuntu ] || [ $release == debian ]; then
+                if ! wget https://github.com/yeyingorg/bbr2.sh/raw/master/bbr2.sh ; then
+                    red    "获取bbr2脚本失败"
+                    yellow "按回车键继续或者按ctrl+c终止"
+                    read rubbish
+                fi
+            else
+                if ! wget https://github.com/jackjieYYY/bbr2/raw/master/bbr2.sh ; then
+                    red    "获取bbr2脚本失败"
+                    yellow "按回车键继续或者按ctrl+c终止"
+                    read rubbish
+                fi
             fi
             chmod +x bbr2.sh
             ./bbr2.sh
             install_bbr
             ;;
         4)
-            rm -rf bbr2.sh
-            if ! wget https://github.com/jackjieYYY/bbr2/raw/master/bbr2.sh ; then
-                red    "获取bbr2脚本失败"
-                yellow "你的服务器貌似没联网，或不支持ipv4"
-                yellow "可以尝试一下修改DNS(搭建脚本里有这个选项)"
-                yellow "按回车键继续或者按ctrl+c终止"
-                read rubbish
-            fi
-            chmod +x bbr2.sh
-            ./bbr2.sh
-            install_bbr
-            ;;
-        5)
             rm -rf tcp.sh
             if ! wget "https://raw.githubusercontent.com/chiakge/Linux-NetSpeed/master/tcp.sh" ; then
                 red    "获取bbrplus脚本失败"
-                yellow "你的服务器貌似没联网，或不支持ipv4"
-                yellow "可以尝试一下修改DNS(搭建脚本里有这个选项)"
                 yellow "按回车键继续或者按ctrl+c终止"
                 read rubbish
             fi
             chmod +x tcp.sh
             ./tcp.sh
             install_bbr
+            ;;
+        5)
             ;;
     esac
     rm -rf bbr.sh
@@ -1222,11 +1252,15 @@ start_menu()
     yellow "若退格键异常可以选择选项16修复"
     tyblue "---------------------------------------------------------------------------"
     tyblue "-----------安装/升级/卸载-----------"
-    green  "1.安装/重新安装V2Ray-WebSocket+TLS+Web"
+    if [ $is_installed == 0 ]; then
+        green  "1.安装V2Ray-WebSocket+TLS+Web"
+    else
+        green  "1.重新安装V2Ray-WebSocket+TLS+Web"
+    fi
     green  "2.升级V2Ray-WebSocket+TLS+Web"
-    tyblue "3.仅升级V2Ray"
-    red    "4.卸载V2Ray-WebSocket+TLS+Web"
-    tyblue "5.仅安装bbr(包含bbr2/bbrplus/魔改版bbr/锐速)"
+    tyblue "3.仅安装bbr(包含bbr2/bbrplus/魔改版bbr/锐速)"
+    tyblue "4.仅升级V2Ray"
+    red    "5.卸载V2Ray-WebSocket+TLS+Web"
     tyblue "--------------启动/停止-------------"
     tyblue "6.重启/启动V2Ray-WebSocket+TLS+Web(对于玄学断连/掉速有奇效)"
     tyblue "7.停止V2Ray-WebSocket+TLS+Web"
@@ -1235,10 +1269,10 @@ start_menu()
     tyblue "  (会覆盖原有域名配置，配置过程中域名输错了造成V2Ray无法启动可以用此选项修复)"
     tyblue "9.添加域名"
     tyblue "10.删除域名"
-    if [ ! -e /etc/v2ray/config.json ] || grep -q "id" /etc/v2ray/config.json >> /dev/null 2>&1 ; then
-        tyblue "11.使用socks(5)作为底层传输协议(降低计算量、延迟)(beta)"
-    else
+    if [ $is_installed == 1 ] && ! grep -q "id" /etc/v2ray/config.json >> /dev/null 2>&1 ; then
         tyblue "11.返回vmess作为底层传输协议"
+    else
+        tyblue "11.使用socks(5)作为底层传输协议(降低计算量、延迟)(beta)"
     fi
     tyblue "12.查看/修改用户ID(id)"
     tyblue "13.查看/修改路径(path)"
@@ -1254,9 +1288,26 @@ start_menu()
     done
     case "$choice" in
         1)
+            if [ $is_installed == 1 ]; then
+                yellow "将卸载现有V2Ray-WebSocket+TLS+Web，并重新安装"
+                choice=""
+                while [ "$chocie" != "y" && "$choice" != "n" ]
+                do
+                    tyblue "是否继续？(y/n)"
+                    read choice
+                done
+                if [ $choice == n ]; then
+                    exit 0
+                fi
+            fi
             install_v2ray_ws_tls
             ;;
         2)
+            ;;
+        3)
+            install_bbr
+            ;;
+        14)
             echo
             yellow "尝试修复退格键异常问题，退格键正常请不要修复"
             yellow "按回车键继续或按Ctrl+c退出"
