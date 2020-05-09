@@ -580,8 +580,9 @@ remove_kernel()
             echo "内核未安装或安装失败，不卸载"
             return 1
         fi
-        yum -y remove ${kernel_list_first[@]} ${kernel_list_modules_first[@]} ${kernel_list_core_first[@]} ${kernel_list_devel_first[@]}
+        rpm -e --nodeps ${kernel_list_first[@]} ${kernel_list_modules_first[@]} ${kernel_list_core_first[@]} ${kernel_list_devel_first[@]}
     fi
+    echo '卸载完成'
 }
 
 clear
