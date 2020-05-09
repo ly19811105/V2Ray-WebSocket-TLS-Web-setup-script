@@ -107,20 +107,20 @@ readDomain()
         fi
     }
     echo -e "\n\n\n"
-    tyblue "**********************关于域名的说明**********************"
+    tyblue "----------------------关于域名的说明----------------------"
     tyblue "假设你的域名是abcd.com，则:"
     tyblue "一级域名为:abcd.com(主机记录为 @ )"
     tyblue "二级域名为:xxx.abcd.com(如www.abcd.com，pan.abcd.com，前缀为主机记录)"
     tyblue "三级域名为:xxx.xxx.abcd.com"
     tyblue "可以在cmd里用ping+域名来查看域名的解析情况"
-    tyblue "**********************************************************"
+    tyblue "----------------------------------------------------------"
     echo
-    tyblue "**********************************************************"
+    tyblue "----------------------------------------------------------"
     tyblue "若你有多个域名，但想只用某个解析到此服务器的域名，请选择2并输入该域名"
     tyblue "注:在这里拥有相同一级域名的二(三)级域名也算不同域名"
     tyblue "如:www.abcd.com，pan.abcd.com，abcd.com，abcd2.com算不同域名"
     echo
-    tyblue "********************请选择域名解析情况********************"
+    tyblue "--------------------请选择域名解析情况--------------------"
     tyblue "1.一级域名和  www.一级域名  都解析到此服务器上"
     tyblue "2.仅一级域名或某个二(三)级域名解析到此服务器上"
     domainconfig=""
@@ -131,7 +131,7 @@ readDomain()
     case "$domainconfig" in
         1)
             echo
-            tyblue "********************请输入一级域名(不带www.，http，:，/)********************"
+            tyblue "--------------------请输入一级域名(不带www.，http，:，/)--------------------"
             read -p "请输入域名：" domain
             while check_domain $domain ;
             do
@@ -140,12 +140,12 @@ readDomain()
             ;;
         2)
             echo
-            tyblue "****************请输入解析到此服务器的域名(不带http，:，/)****************"
+            tyblue "----------------请输入解析到此服务器的域名(不带http，:，/)----------------"
             read -p "请输入域名：" domain
             ;;
     esac
     echo -e "\n\n\n"
-    tyblue "******************************请选择要伪装的网站页面******************************"
+    tyblue "------------------------------请选择要伪装的网站页面------------------------------"
     tyblue "1.404页面 (模拟网站后台)"
     green  "说明：大型网站几乎都有使用网站后台，比如bilibili的每个视频都是由"
     green  "另外一个域名提供的，直接访问那个域名的根目录将返回404或其他错误页面"
@@ -166,11 +166,11 @@ readDomain()
 readTlsConfig()
 {
     echo -e "\n\n\n"
-    tyblue "****************************************************************"
+    tyblue "----------------------------------------------------------------"
     tyblue "                     速度                        抗封锁性"
     tyblue "TLS1.2+1.3：  ++++++++++++++++++++          ++++++++++++++++++++"
     tyblue "仅TLS1.3：    ++++++++++++++++++++          ++++++++++++++++++"
-    tyblue "****************************************************************"
+    tyblue "----------------------------------------------------------------"
     tyblue "经测试，当TLS1.2和TLS1.3并存的时候，v2ray会优先选择TLS1.3进行连接"
     green  "推荐使用TLS1.2+1.3"
     echo
@@ -468,23 +468,22 @@ doupdate()
     {
         echo -e "\n\n\n"
         tyblue "------------------请选择升级系统版本--------------------"
-        tyblue "1.最新beta版(现在是20.10)(2020.05)"
-        tyblue "2.最新发行版(现在是20.04)(2020.05)"
-        tyblue "3.最新LTS版(现在是20.04)(2020.05)"
+        tyblue " 1.最新beta版(现在是20.10)(2020.05)"
+        tyblue " 2.最新发行版(现在是20.04)(2020.05)"
+        tyblue " 3.最新LTS版(现在是20.04)(2020.05)"
         tyblue "-------------------------版本说明-------------------------"
-        tyblue "beta版：即测试版"
-        tyblue "发行版：即稳定版"
-        tyblue "LTS版：长期支持版本，可以理解为超级稳定版"
+        tyblue " beta版：即测试版"
+        tyblue " 发行版：即稳定版"
+        tyblue " LTS版：长期支持版本，可以理解为超级稳定版"
         tyblue "-------------------------注意事项-------------------------"
-        yellow "1.升级系统可能需要15分钟或更久"
-        yellow "2.升级系统完成后将会重启，重启后，请再次运行此脚本完成剩余安装"
-        yellow "3.有的时候不能一次性更新到所选择的版本，可能要更新两次，所以更新完"
-        yellow "  第一次重启后，若还未升级到选定版本，请再选择相同的升级版本"
-        yellow "4.升级过程中若有问话/对话框，如果看不懂，优先选择yes/y/第一个选项"
-        yellow "5.升级过程中如果与ssh断开连接，建议重置系统"
-        yellow "6.升级系统后ssh超时时间/ssh端口号将会恢复默认"
+        yellow " 1.升级系统可能需要15分钟或更久"
+        yellow " 2.升级系统完成后将会重启，重启后，请再次运行此脚本完成剩余安装"
+        yellow " 3.有的时候不能一次性更新到所选择的版本，可能要更新两次"
+        yellow " 4.升级过程中若有问话/对话框，如果看不懂，优先选择yes/y/第一个选项"
+        yellow " 5.升级系统后以下配置可能会恢复系统默认配置："
+        yellow "     ssh端口   ssh超时时间    bbr加速(恢复到关闭状态)"
         tyblue "----------------------------------------------------------"
-        green  "您现在的系统版本是$systemVersion"
+        green  " 您现在的系统版本是$systemVersion"
         tyblue "----------------------------------------------------------"
         echo
         choice=""
@@ -1180,13 +1179,13 @@ change_dns()
     red    "  如果听不懂，那么请在安装完v2ray+ws+tls后再修改dns，并且修改完后不要重新安装"
     red    "2.Ubuntu系统重启后可能会恢复原dns"
     tyblue "此操作将修改dns服务器为1.1.1.1和1.0.0.1(cloudflare公共dns)"
-    if_change_dns="45"
-    while [ "$if_change_dns" != "y" -a "$if_change_dns" != "n" ]
+    choice=""
+    while [ "$choice" != "y" -a "$choice" != "n" ]
     do
         tyblue "是否要继续?(y/n)"
-        read if_change_dns
+        read choice
     done
-    if [ $if_change_dns == "y" ]; then
+    if [ $choice == y ]; then
         if ! grep -q "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" /etc/resolv.conf ; then
             sed -i 's/nameserver /#&/' /etc/resolv.conf
             echo ' ' >> /etc/resolv.conf
@@ -1254,14 +1253,15 @@ start_menu()
 {
     clear
     tyblue "-------------- V2Ray WebSocket(ws)+TLS(1.3)+Web 搭建/管理脚本--------------"
-    tyblue "  官网：https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script"
+    tyblue " 官网：https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script"
     tyblue "---------------------------------------------------------------------------"
-    yellow "  此脚本需要一个解析到本服务器的域名!!!!"
-    tyblue "  推荐服务器系统使用Ubuntu最新版"
-    yellow "  部分ssh工具会出现退格键无法使用问题，建议先保证退格键正常，再安装"
-    yellow "  测试退格键正常方法：按一下退格键，不会出现奇怪的字符即为正常"
-    yellow "  若退格键异常可以选择选项14修复"
+    yellow " 此脚本需要一个解析到本服务器的域名!!!!"
+    tyblue " 推荐服务器系统使用Ubuntu最新版"
+    yellow " 部分ssh工具会出现退格键无法使用问题，建议先保证退格键正常，再安装"
+    yellow " 测试退格键正常方法：按一下退格键，不会出现奇怪的字符即为正常"
+    yellow " 若退格键异常可以选择选项14修复"
     tyblue "---------------------------------------------------------------------------"
+    echo
     echo
     tyblue " -----------安装/升级/卸载-----------"
     if [ $is_installed == 0 ]; then
@@ -1273,9 +1273,11 @@ start_menu()
     tyblue "   3. 仅安装bbr(包含升级内核/安装bbr/bbr2/bbrplus/魔改版bbr/锐速)"
     tyblue "   4. 仅升级V2Ray"
     red    "   5. 卸载V2Ray-WebSocket+TLS+Web"
+    echo
     tyblue " --------------启动/停止-------------"
     tyblue "   6. 重启/启动V2Ray-WebSocket+TLS+Web(对于玄学断连/掉速有奇效)"
     tyblue "   7. 停止V2Ray-WebSocket+TLS+Web"
+    echo
     tyblue " ----------------管理----------------"
     tyblue "   8. 重置域名和TLS配置"
     tyblue "      (会覆盖原有域名配置，安装过程中域名输错了造成V2Ray无法启动可以用此选项修复)"
@@ -1288,10 +1290,12 @@ start_menu()
     fi
     tyblue "  12. 查看/修改用户ID(id)"
     tyblue "  13. 查看/修改路径(path)"
+    echo
     tyblue " ----------------其它----------------"
     tyblue "  14. 尝试修复退格键无法使用的问题"
     tyblue "  15. 修改dns"
     yellow "  16. 退出脚本"
+    echo
     echo
     choice=""
     while [[ "$choice" != "1" && "$choice" != "2" && "$choice" != "3" && "$choice" != "4" && "$choice" != "5" && "$choice" != "6" && "$choice" != "7" && "$choice" != "8" && "$choice" != "9" && "$choice" != "10" && "$choice" != "11" && "$choice" != "12" && "$choice" != "13" && "$choice" != "14" && "$choice" != "15" && "$choice" != "16" ]]
@@ -1303,7 +1307,7 @@ start_menu()
             if [ $is_installed == 1 ]; then
                 yellow "将卸载现有V2Ray-WebSocket+TLS+Web，并重新安装"
                 choice=""
-                while [ "$choice" != "y" && "$choice" != "n" ]
+                while [ "$choice" != "y" ] && [ "$choice" != "n" ]
                 do
                     tyblue "是否继续？(y/n)"
                     read choice
