@@ -801,38 +801,103 @@ install_bbr()
 #卸载多余内核
 remove_other_kernel()
 {
-    local kernel_list_image=($(dpkg --list | grep 'linux-image' | awk '{print $2}'))
-    local kernel_list_modules=($(dpkg --list | grep 'linux-modules' | awk '{print $2}'))
-    local kernel_now=`uname -r`
-    local ok_install=0
-    for ((i=${#kernel_list_image[@]}-1;i>=0;i--))
-    do
-        if [[ "${kernel_list_image[$i]}" =~ "$kernel_now" ]] ; then     
-            kernel_list_image[$i]=""
-            ((ok_install++))
+    if [ $release == ubuntu ] || [ $release == debian ]; then
+        local kernel_list_image=($(dpkg --list | grep 'linux-image' | awk '{print $2}'))
+        local kernel_list_modules=($(dpkg --list | grep 'linux-modules' | awk '{print $2}'))
+        local kernel_now=`uname -r`
+        local ok_install=0
+        for ((i=${#kernel_list_image[@]}-1;i>=0;i--))
+        do
+            if [[ "${kernel_list_image[$i]}" =~ "$kernel_now" ]] ; then     
+                kernel_list_image[$i]=""
+                ((ok_install++))
+            fi
+        done
+        if [ "$ok_install" -lt "1" ] ; then
+            red "未发现正在使用的内核，可能已经被卸载"
+            yellow "按回车键继续。。。"
+            read -s rubbish
+            return 1
         fi
-    done
-    if [ "$ok_install" -lt "1" ] ; then
-        red "未发现正在使用的内核，可能已经被卸载"
-        yellow "按回车键继续。。。"
-        read -s rubbish
-        return 1
-    fi
-    ok_install=0
-    for ((i=${#kernel_list_modules[@]}-1;i>=0;i--))
-    do
-        if [[ "${kernel_list_modules[$i]}" =~ "$kernel_now" ]] ; then
-            kernel_list_modules[$i]=""
-            ((ok_install++))
+        ok_install=0
+        for ((i=${#kernel_list_modules[@]}-1;i>=0;i--))
+        do
+            if [[ "${kernel_list_modules[$i]}" =~ "$kernel_now" ]] ; then
+                kernel_list_modules[$i]=""
+                ((ok_install++))
+            fi
+        done
+        if [ "$ok_install" -lt "1" ] ; then
+            red "未发现正在使用的内核，可能已经被卸载"
+            yellow "按回车键继续。。。"
+            read -s rubbish
+            return 1
         fi
-    done
-    if [ "$ok_install" -lt "1" ] ; then
-        red "未发现正在使用的内核，可能已经被卸载"
-        yellow "按回车键继续。。。"
-        read -s rubbish
-        return 1
+        apt -y purge ${kernel_list_image[@]} ${kernel_list_modules[@]}
+    else
+        local kernel_list=($(rpm -qa |grep '^kernel-[0-9]\|^kernel-ml-[0-9]'))
+        local kernel_list_modules=($(rpm -qa |grep '^kernel-modules-\|^kernel-ml-modules-'))
+        local kernel_list_core=($(rpm -qa | grep '^kernel-core-\|^kernel-ml-core-'))
+        local kernel_list_devel=($(rpm -qa | grep '^kernel-devel-\|^kernel-ml-devel-'))
+        local kernel_now=`uname -r`
+        local ok_install=0
+        for ((i=${#kernel_list[@]}-1;i>=0;i--))
+        do
+            if [[ "${kernel_list[$i]}" =~ "$kernel_now" ]] ; then     
+                kernel_list[$i]=""
+                ((ok_install++))
+            fi
+        done
+        if [ "$ok_install" -lt "1" ] ; then
+            red "未发现正在使用的内核，可能已经被卸载"
+            yellow "按回车键继续。。。"
+            read -s rubbish
+            return 1
+        fi
+        ok_install=0
+        for ((i=${#kernel_list_modules[@]}-1;i>=0;i--))
+        do
+            if [[ "${kernel_list_modules[$i]}" =~ "$kernel_now" ]] ; then     
+                kernel_list_modules[$i]=""
+                ((ok_install++))
+            fi
+        done
+        if [ "$ok_install" -lt "1" ] ; then
+            red "未发现正在使用的内核，可能已经被卸载"
+            yellow "按回车键继续。。。"
+            read -s rubbish
+            return 1
+        fi
+        ok_install=0
+        for ((i=${#kernel_list_core[@]}-1;i>=0;i--))
+        do
+            if [[ "${kernel_list_core[$i]}" =~ "$kernel_now" ]] ; then     
+                kernel_list_core[$i]=""
+                ((ok_install++))
+            fi
+        done
+        if [ "$ok_install" -lt "1" ] ; then
+            red "未发现正在使用的内核，可能已经被卸载"
+            yellow "按回车键继续。。。"
+            read -s rubbish
+            return 1
+        fi
+        ok_install=0
+        for ((i=${#kernel_list_devel[@]}-1;i>=0;i--))
+        do
+            if [[ "${kernel_list_devel[$i]}" =~ "$kernel_now" ]] ; then     
+                kernel_list_devel[$i]=""
+                ((ok_install++))
+            fi
+        done
+        if [ "$ok_install" -lt "1" ] ; then
+            red "未发现正在使用的内核，可能已经被卸载"
+            yellow "按回车键继续。。。"
+            read -s rubbish
+            return 1
+        fi
+        yum -y remove ${kernel_list[@]} ${kernel_list_modules[@]} ${kernel_list_core[@]} ${kernel_list_devel[@]}
     fi
-    apt -y purge ${kernel_list_image[@]} ${kernel_list_modules[@]}
     green "-------------------卸载完成-------------------"
 }
 
