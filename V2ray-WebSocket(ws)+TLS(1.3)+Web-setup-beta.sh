@@ -467,15 +467,15 @@ doupdate()
     updateSystem()
     {
         echo -e "\n\n\n"
-        tyblue "********************请选择升级系统版本********************"
-        tyblue "1.最新beta版(现在是20.04)(2020.04)"
-        tyblue "2.最新稳定版(现在是20.04)(2020.04)"
-        tyblue "3.最新LTS版(现在是20.04)(2020.04)"
-        tyblue "*************************版本说明*************************"
+        tyblue "------------------请选择升级系统版本--------------------"
+        tyblue "1.最新beta版(现在是20.10)(2020.05)"
+        tyblue "2.最新发行版(现在是20.04)(2020.05)"
+        tyblue "3.最新LTS版(现在是20.04)(2020.05)"
+        tyblue "-------------------------版本说明-------------------------"
         tyblue "beta版：即测试版"
         tyblue "发行版：即稳定版"
         tyblue "LTS版：长期支持版本，可以理解为超级稳定版"
-        tyblue "*************************注意事项*************************"
+        tyblue "-------------------------注意事项-------------------------"
         yellow "1.升级系统可能需要15分钟或更久"
         yellow "2.升级系统完成后将会重启，重启后，请再次运行此脚本完成剩余安装"
         yellow "3.有的时候不能一次性更新到所选择的版本，可能要更新两次，所以更新完"
@@ -483,9 +483,9 @@ doupdate()
         yellow "4.升级过程中若有问话/对话框，如果看不懂，优先选择yes/y/第一个选项"
         yellow "5.升级过程中如果与ssh断开连接，建议重置系统"
         yellow "6.升级系统后ssh超时时间/ssh端口号将会恢复默认"
-        tyblue "**********************************************************"
+        tyblue "----------------------------------------------------------"
         green  "您现在的系统版本是$systemVersion"
-        tyblue "**********************************************************"
+        tyblue "----------------------------------------------------------"
         echo
         choice=""
         while [ "$choice" != "1" -a "$choice" != "2" -a "$choice" != "3" ]
@@ -536,7 +536,7 @@ doupdate()
             yellow "否则可能无法开机"
         elif [ $mem_ok == 0 ]; then
             echo
-            red "检测到内存过小，升级系统可能导致无法开机"
+            red "检测到内存过小，升级系统可能导致无法开机，请谨慎选择"
         fi
     else
         green  "1.仅更新已安装软件"
@@ -1265,33 +1265,33 @@ start_menu()
     echo
     tyblue " -----------安装/升级/卸载-----------"
     if [ $is_installed == 0 ]; then
-        green  "     1. 安装V2Ray-WebSocket+TLS+Web"
+        green  "   1. 安装V2Ray-WebSocket+TLS+Web"
     else
-        green  "     1. 重新安装V2Ray-WebSocket+TLS+Web"
+        green  "   1. 重新安装V2Ray-WebSocket+TLS+Web"
     fi
-    green  "     2. 升级V2Ray-WebSocket+TLS+Web"
-    tyblue "     3. 仅安装bbr(包含升级内核/安装bbr/bbr2/bbrplus/魔改版bbr/锐速)"
-    tyblue "     4. 仅升级V2Ray"
-    red    "     5. 卸载V2Ray-WebSocket+TLS+Web"
+    green  "   2. 升级V2Ray-WebSocket+TLS+Web"
+    tyblue "   3. 仅安装bbr(包含升级内核/安装bbr/bbr2/bbrplus/魔改版bbr/锐速)"
+    tyblue "   4. 仅升级V2Ray"
+    red    "   5. 卸载V2Ray-WebSocket+TLS+Web"
     tyblue " --------------启动/停止-------------"
-    tyblue "     6. 重启/启动V2Ray-WebSocket+TLS+Web(对于玄学断连/掉速有奇效)"
-    tyblue "     7. 停止V2Ray-WebSocket+TLS+Web"
+    tyblue "   6. 重启/启动V2Ray-WebSocket+TLS+Web(对于玄学断连/掉速有奇效)"
+    tyblue "   7. 停止V2Ray-WebSocket+TLS+Web"
     tyblue " ----------------管理----------------"
-    tyblue "     8. 重置域名和TLS配置"
-    tyblue "        (会覆盖原有域名配置，安装过程中域名输错了造成V2Ray无法启动可以用此选项修复)"
-    tyblue "     9. 添加域名"
-    tyblue "    10. 删除域名"
+    tyblue "   8. 重置域名和TLS配置"
+    tyblue "      (会覆盖原有域名配置，安装过程中域名输错了造成V2Ray无法启动可以用此选项修复)"
+    tyblue "   9. 添加域名"
+    tyblue "  10. 删除域名"
     if [ $is_installed == 1 ] && ! grep -q "id" /etc/v2ray/config.json >> /dev/null 2>&1 ; then
-        tyblue "    11. 返回vmess作为底层传输协议"
+        tyblue "  11. 返回vmess作为底层传输协议"
     else
-        tyblue "    11. 使用socks(5)作为底层传输协议(降低计算量、延迟)(beta)"
+        tyblue "  11. 使用socks(5)作为底层传输协议(降低计算量、延迟)(beta)"
     fi
-    tyblue "    12. 查看/修改用户ID(id)"
-    tyblue "    13. 查看/修改路径(path)"
+    tyblue "  12. 查看/修改用户ID(id)"
+    tyblue "  13. 查看/修改路径(path)"
     tyblue " ----------------其它----------------"
-    tyblue "    14. 尝试修复退格键无法使用的问题"
-    tyblue "    15. 修改dns"
-    yellow "    16. 退出脚本"
+    tyblue "  14. 尝试修复退格键无法使用的问题"
+    tyblue "  15. 修改dns"
+    yellow "  16. 退出脚本"
     echo
     choice=""
     while [[ "$choice" != "1" && "$choice" != "2" && "$choice" != "3" && "$choice" != "4" && "$choice" != "5" && "$choice" != "6" && "$choice" != "7" && "$choice" != "8" && "$choice" != "9" && "$choice" != "10" && "$choice" != "11" && "$choice" != "12" && "$choice" != "13" && "$choice" != "14" && "$choice" != "15" && "$choice" != "16" ]]
