@@ -1411,19 +1411,6 @@ start_menu()
             get_base_information
             choice=""
             if grep -q "id" /etc/v2ray/config.json ; then
-                while [ "$choice" != "y" -a "$choice" != "n" ]
-                do
-                    tyblue "返回vmess作为底层协议?(y/n)"
-                    read choice
-                done
-                if [ $choice == y ]; then
-                    v2id=`cat /proc/sys/kernel/random/uuid`
-                    config_v2ray_vmess
-                    service v2ray restart
-                    green "配置完成！！！"
-                    green "用户ID：$v2id"
-                fi
-            else
                 tyblue "此操作将会把底层协议修改为socks(5)"
                 tyblue "关于这么做的意义，参考https://github.com/v2ray/discussion/issues/513"
                 while [ "$choice" != "y" -a "$choice" != "n" ]
@@ -1490,6 +1477,19 @@ cat <<EOF
   ]
 }
 EOF
+                fi
+            else
+                while [ "$choice" != "y" -a "$choice" != "n" ]
+                do
+                    tyblue "返回vmess作为底层协议?(y/n)"
+                    read choice
+                done
+                if [ $choice == y ]; then
+                    v2id=`cat /proc/sys/kernel/random/uuid`
+                    config_v2ray_vmess
+                    service v2ray restart
+                    green "配置完成！！！"
+                    green "用户ID：$v2id"
                 fi
             fi
             ;;
