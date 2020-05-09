@@ -1057,17 +1057,17 @@ install_v2ray_ws_tls()
     curl https://get.acme.sh | sh
     $HOME/.acme.sh/acme.sh --upgrade --auto-upgrade
 
-    configtls $domain $domainconfig $pretend
-    get_web $domain $pretend
-    get_base_information
     bash <(curl -L -s https://install.direct/go.sh)
     bash <(curl -L -s https://install.direct/go.sh)
     service v2ray stop
+    get_base_information
     config_v2ray_vmess
-    service v2ray start
 
 
+    configtls $domain $domainconfig $pretend
+    get_web $domain $pretend
     /etc/nginx/sbin/nginx
+    service v2ray start
     curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1   #激活tcp_fast_open
     curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1
     echo -e "\n\n\n"
