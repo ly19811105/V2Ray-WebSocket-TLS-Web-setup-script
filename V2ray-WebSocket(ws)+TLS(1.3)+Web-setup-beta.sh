@@ -492,7 +492,7 @@ doupdate()
         do
             read -p "您的选择是：" choice
         done
-        if [ "$(cat /etc/ssh/sshd_config |grep -i "^port " | awk '{print $2}')" != "22" && "$(cat /etc/ssh/sshd_config |grep -i "^port " | awk '{print $2}')" != "" ]; then
+        if [ "$(cat /etc/ssh/sshd_config |grep -i "^port " | awk '{print $2}')" != "22" ] && [ "$(cat /etc/ssh/sshd_config |grep -i "^port " | awk '{print $2}')" != "" ]; then
             red "检测到ssh端口号被修改"
             red "升级系统后ssh端口号将恢复默认值(22)"
             yellow "按回车键继续。。。"
