@@ -688,11 +688,15 @@ install_bbr()
         1)
             if [ $mem_ok == 2 ]; then
                 red "请确保服务器的内存>=512MB，否则更换最新版内核可能无法开机"
+                yellow "按回车键以继续。。。"
+                read -s rubbish
+                echo
             elif [ $mem_ok == 0 ]; then 
                 red "内存过小，更换最新版内核可能无法开机"
+                yellow "按回车键以继续。。。"
+                read -s rubbish
+                echo
             fi
-            yellow "按回车键以继续。。。"
-            read -s rubbish
             yellow "此操作将会更换最新内核，并开启bbr"
             yellow "若最新版内核安装失败，可以尝试："
             yellow "1.更换Ubuntu系统"
@@ -836,9 +840,9 @@ remove_other_kernel()
         apt -y purge ${kernel_list_image[@]} ${kernel_list_modules[@]}
     else
         local kernel_list=($(rpm -qa |grep '^kernel-[0-9]\|^kernel-ml-[0-9]'))
-        local kernel_list_modules=($(rpm -qa |grep '^kernel-modules-\|^kernel-ml-modules-'))
-        local kernel_list_core=($(rpm -qa | grep '^kernel-core-\|^kernel-ml-core-'))
-        local kernel_list_devel=($(rpm -qa | grep '^kernel-devel-\|^kernel-ml-devel-'))
+        local kernel_list_modules=($(rpm -qa |grep '^kernel-modules\|^kernel-ml-modules'))
+        local kernel_list_core=($(rpm -qa | grep '^kernel-core\|^kernel-ml-core'))
+        local kernel_list_devel=($(rpm -qa | grep '^kernel-devel\|^kernel-ml-devel'))
         local kernel_now=`uname -r`
         local ok_install=0
         for ((i=${#kernel_list[@]}-1;i>=0;i--))
@@ -1299,7 +1303,7 @@ start_menu()
             if [ $is_installed == 1 ]; then
                 yellow "将卸载现有V2Ray-WebSocket+TLS+Web，并重新安装"
                 choice=""
-                while [ "$chocie" != "y" && "$choice" != "n" ]
+                while [ "$choice" != "y" && "$choice" != "n" ]
                 do
                     tyblue "是否继续？(y/n)"
                     read choice
