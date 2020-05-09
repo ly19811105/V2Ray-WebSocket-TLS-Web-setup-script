@@ -20,23 +20,19 @@ cur_dir=$(pwd)
 
 [[ -d "/proc/vz" ]] && echo -e "${red}Error:${plain} Your VPS is based on OpenVZ, which is not supported." && exit 1
 
-if [ -f /etc/redhat-release ]; then
-    release="centos"
-elif cat /etc/issue | grep -Eqi "ubuntu"; then
+if lsb_release -a 2>&1 | grep -qi "ubuntu" || cat /etc/issue | grep -qi "ubuntu" || cat /proc/version | grep -qi "ubuntu"; then
     release="ubuntu"
-elif cat /etc/issue | grep -Eqi "debian"; then
+elif lsb_release -a 2>&1 | grep -qi "debian" || cat /etc/issue | grep -qi "debian" || cat /proc/version | grep -qi "debian" || command -v apt > /dev/null 2>&1 && ! command -v yum > /dev/null 2>&1; then
     release="debian"
-elif cat /etc/issue | grep -Eqi "centos|red hat|redhat"; then
+elif lsb_release -a 2>&1 | grep -qi "centos" || cat /etc/issue | grep -qi "centos" || cat /proc/version | grep -qi "centos"; then
     release="centos"
-elif cat /proc/version | grep -Eqi "ubuntu"; then
-    release="ubuntu"
-elif cat /proc/version | grep -Eqi "debian"; then
-    release="debian"
-elif cat /proc/version | grep -Eqi "centos|red hat|redhat"; then
+elif [ -f /etc/redhat-release ] || lsb_release -a 2>&1 | grep -Eqi "red hat|redhat" || cat /etc/issue | grep -Eqi "red hat|redhat" || cat /proc/version | grep -Eqi "red hat|redhat" || command -v yum > /dev/null 2>&1 && ! command -v apt > /dev/null 2>&1; then
     release="centos"
 else
-    release=""
+    red "不支持的系统！！"
+    exit 1
 fi
+
 
 is_digit(){
     local input=${1}
@@ -386,6 +382,10 @@ install_bbr() {
     [[ ! -e "/usr/bin/wget" ]] && apt -y update && apt -y install wget
 
     if [[ x"${release}" == x"centos" ]]; then
+        kernel_list_first=($(rpm -qa |grep '^kernel-[0-9]\|^kernel-ml-[0-9]'))
+        kernel_list_modules_first=($(rpm -qa |grep '^kernel-modules\|^kernel-ml-modules'))
+        kernel_list_core_first=($(rpm -qa | grep '^kernel-core\|^kernel-ml-core'))
+        kernel_list_devel_first=($(rpm -qa | grep '^kernel-devel\|^kernel-ml-devel'))
         install_elrepo
         [ ! "$(command -v yum-config-manager)" ] && yum install -y yum-utils > /dev/null 2>&1
         [ x"$(yum-config-manager elrepo-kernel | grep -w enabled | awk '{print $3}')" != x"True" ] && yum-config-manager --enable elrepo-kernel > /dev/null 2>&1
@@ -432,18 +432,21 @@ install_bbr() {
                 exit 1
             fi
             rm -f ${rpm_kernel_name} ${rpm_kernel_devel_name}
+            remove_kernel
         elif centosversion 7; then
             yum -y install kernel-ml kernel-ml-devel
             if [ $? -ne 0 ]; then
                 echo -e "${red}Error:${plain} Install latest kernel failed, please check it."
                 exit 1
             fi
+            remove_kernel
         elif centosversion 8; then
             yum -y install kernel-ml kernel-ml-devel
             if [ $? -ne 0 ]; then
                 echo -e "${red}Error:${plain} Install latest kernel failed, please check it."
                 exit 1
             fi
+            remove_kernel
         fi
     elif [[ x"${release}" == x"ubuntu" || x"${release}" == x"debian" ]]; then
         echo -e "${green}Info:${plain} Getting latest kernel version..."
@@ -496,19 +499,45 @@ remove_kernel()
     if [ "$auto_remove" == "n" ]; then
         return 0
     fi
-    kernel_list_headers=($(dpkg --list | grep 'linux-headers' | awk '{print $2}'))
-    kernel_list_image=($(dpkg --list | grep 'linux-image' | awk '{print $2}'))
-    kernel_list_modules=($(dpkg --list | grep 'linux-modules' | awk '{print $2}'))
-    kernel_headers_all=${headers_all_deb_name%%_*}
-    kernel_headers=${headers_generic_deb_name%%_*}
-    kernel_image=${deb_name%%_*}
-    kernel_modules=${modules_deb_name%%_*}
-    if [ "$flag" == "1" ]; then
+    if [ $release == ubuntu ] || [ $release == debian ]; then
+        kernel_list_headers=($(dpkg --list | grep 'linux-headers' | awk '{print $2}'))
+        kernel_list_image=($(dpkg --list | grep 'linux-image' | awk '{print $2}'))
+        kernel_list_modules=($(dpkg --list | grep 'linux-modules' | awk '{print $2}'))
+        kernel_headers_all=${headers_all_deb_name%%_*}
+        kernel_headers=${headers_generic_deb_name%%_*}
+        kernel_image=${deb_name%%_*}
+        kernel_modules=${modules_deb_name%%_*}
+        if [ "$flag" == "1" ]; then
+            ok_install=0
+            for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
+            do
+                if [[ "${kernel_list_headers[$i]}" == "$kernel_headers" ]] ; then     
+                    kernel_list_headers[$i]=""
+                    ((ok_install++))
+                fi
+            done
+            if [ "$ok_install" != "1" ] ; then
+                echo "内核可能安装失败！不卸载"
+                return 1
+            fi
+            ok_install=0
+            for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
+            do
+                if [[ "${kernel_list_headers[$i]}" == "$kernel_headers_all" ]] ; then     
+                    kernel_list_headers[$i]=""
+                    ((ok_install++))
+                fi
+            done
+            if [ "$ok_install" != "1" ] ; then
+                echo "内核可能安装失败！不卸载"
+                return 1
+            fi
+        fi
         ok_install=0
-        for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
+        for ((i=${#kernel_list_image[@]}-1;i>=0;i--))
         do
-            if [[ "${kernel_list_headers[$i]}" == "$kernel_headers" ]] ; then     
-                kernel_list_headers[$i]=""
+            if [[ "${kernel_list_image[$i]}" == "$kernel_image" ]] ; then     
+                kernel_list_image[$i]=""
                 ((ok_install++))
             fi
         done
@@ -517,10 +546,10 @@ remove_kernel()
             return 1
         fi
         ok_install=0
-        for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
+        for ((i=${#kernel_list_modules[@]}-1;i>=0;i--))
         do
-            if [[ "${kernel_list_headers[$i]}" == "$kernel_headers_all" ]] ; then     
-                kernel_list_headers[$i]=""
+            if [[ "${kernel_list_modules[$i]}" == "$kernel_modules" ]] ; then     
+                kernel_list_modules[$i]=""
                 ((ok_install++))
             fi
         done
@@ -528,45 +557,31 @@ remove_kernel()
             echo "内核可能安装失败！不卸载"
             return 1
         fi
-    fi
-    ok_install=0
-    for ((i=${#kernel_list_image[@]}-1;i>=0;i--))
-    do
-        if [[ "${kernel_list_image[$i]}" == "$kernel_image" ]] ; then     
-            kernel_list_image[$i]=""
-            ((ok_install++))
-        fi
-    done
-    if [ "$ok_install" != "1" ] ; then
-        echo "内核可能安装失败！不卸载"
-        return 1
-    fi
-    ok_install=0
-    for ((i=${#kernel_list_modules[@]}-1;i>=0;i--))
-    do
-        if [[ "${kernel_list_modules[$i]}" == "$kernel_modules" ]] ; then     
-            kernel_list_modules[$i]=""
-            ((ok_install++))
-        fi
-    done
-    if [ "$ok_install" != "1" ] ; then
-        echo "内核可能安装失败！不卸载"
-        return 1
-    fi
 
-    echo "卸载过程中弹出对话框，请选择NO！"
-    echo "卸载过程中弹出对话框，请选择NO！"
-    echo "卸载过程中弹出对话框，请选择NO！"
-    echo "按回车键继续"
-    read rubbish
-    if [ "$flag" == "1" ]; then
-        apt -y purge ${kernel_list_headers[@]} ${kernel_list_image[@]} ${kernel_list_modules[@]}
-        #apt -y remove ${kernel_list_headers[@]} ${kernel_list_image[@]} ${kernel_list_modules[@]}
+        echo "卸载过程中弹出对话框，请选择NO！"
+        echo "卸载过程中弹出对话框，请选择NO！"
+        echo "卸载过程中弹出对话框，请选择NO！"
+        echo "按回车键继续"
+        read -s rubbish
+        if [ "$flag" == "1" ]; then
+            apt -y purge ${kernel_list_headers[@]} ${kernel_list_image[@]} ${kernel_list_modules[@]}
+            #apt -y remove ${kernel_list_headers[@]} ${kernel_list_image[@]} ${kernel_list_modules[@]}
+        else
+            apt -y purge ${kernel_list_image[@]} ${kernel_list_modules[@]}
+            #apt -y remove ${kernel_list_image[@]} ${kernel_list_modules[@]}
+        fi
+        apt -y -f install
     else
-        apt -y purge ${kernel_list_image[@]} ${kernel_list_modules[@]}
-        #apt -y remove ${kernel_list_image[@]} ${kernel_list_modules[@]}
+        local kernel_list=($(rpm -qa |grep '^kernel-[0-9]\|^kernel-ml-[0-9]'))
+        local kernel_list_modules=($(rpm -qa |grep '^kernel-modules\|^kernel-ml-modules'))
+        local kernel_list_core=($(rpm -qa | grep '^kernel-core\|^kernel-ml-core'))
+        local kernel_list_devel=($(rpm -qa | grep '^kernel-devel\|^kernel-ml-devel'))
+        if [ $((${#kernel_list[@]}-${#kernel_list_first[@]})) -le 0 ] || [ $((${#kernel_list_modules[@]}-${#kernel_list_modules_first[@]})) -le 0 ] || [ $((${#kernel_list_core[@]}-${#kernel_list_core_first[@]})) -le 0 ] || [ $((${#kernel_list_devel[@]}-${#kernel_list_devel_first[@]})) -le 0 ]; then
+            echo "内核未安装或安装失败，不卸载"
+            return 1
+        fi
+        yum -y remove ${kernel_list_first[@]} ${kernel_list_modules_first[@]} ${kernel_list_core_first[@]} ${kernel_list_devel_first[@]}
     fi
-    apt -y -f install
 }
 
 clear
