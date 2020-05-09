@@ -400,7 +400,6 @@ EOF
     if [ $2 -eq 1 ]; then
         sed -i "s/server_name $1/& www.$1/" /etc/nginx/conf.d/v2ray.conf
     fi
-    get_web $1 $3
 }
 
 
@@ -459,7 +458,6 @@ EOF
     else
         sed -i "0,/$old_domain/s//$old_domain $1/" /etc/nginx/conf.d/v2ray.conf
     fi
-    get_web $1 $3
 }
 
 
@@ -878,12 +876,12 @@ get_certs()
     /etc/nginx/sbin/nginx
     case "$2" in
         1)
-            ~/.acme.sh/acme.sh --issue -d $1 -d www.$1 --webroot /etc/nginx/html -k ec-256 --ocsp
-            ~/.acme.sh/acme.sh --issue -d $1 -d www.$1 --webroot /etc/nginx/html -k ec-256 --ocsp
+            $HOME/.acme.sh/acme.sh --issue -d $1 -d www.$1 --webroot /etc/nginx/html -k ec-256 --ocsp
+            $HOME/.acme.sh/acme.sh --issue -d $1 -d www.$1 --webroot /etc/nginx/html -k ec-256 --ocsp
             ;;
         2)
-            ~/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html -k ec-256 --ocsp
-            ~/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html -k ec-256 --ocsp
+            $HOME/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html -k ec-256 --ocsp
+            $HOME/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html -k ec-256 --ocsp
             ;;
     esac
     /etc/nginx/sbin/nginx -s stop
@@ -988,10 +986,10 @@ install_v2ray_ws_tls()
 
 #安装acme.sh
     curl https://get.acme.sh | sh
-    ~/.acme.sh/acme.sh --upgrade --auto-upgrade
-
+    $HOME/.acme.sh/acme.sh --upgrade --auto-upgrade
 
     configtls $domain $domainconfig $pretend
+    get_web $domain $pretend
     get_base_information
     bash <(curl -L -s https://install.direct/go.sh)
     bash <(curl -L -s https://install.direct/go.sh)
@@ -1290,6 +1288,7 @@ start_menu()
             readDomain
             readTlsConfig
             configtls $domain $domainconfig $pretend
+            get_web $domain $pretend
             /etc/nginx/sbin/nginx
             green "重置域名完成！！"
             case "$domainconfig" in
@@ -1311,6 +1310,7 @@ start_menu()
             readDomain
             get_base_information
             new_domain $domain $domainconfig $pretend
+            get_web $domain $pretend
             green "添加域名完成！！"
             /etc/nginx/sbin/nginx
             case "$domainconfig" in
