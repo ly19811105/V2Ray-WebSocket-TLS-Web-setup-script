@@ -311,7 +311,7 @@ EOF
 
 
 #配置nginx(重置域名配置) 参数：  domain  domainconfig  pretend
-configtls()
+first_domain()
 {
     get_certs $1 $2
     configtls_init
@@ -404,7 +404,7 @@ EOF
 
 
 #添加新域名 参数：domain domainconfig pretend
-new_domain()
+add_domain()
 {
     get_certs $1 $2
     configtls_init
@@ -596,6 +596,8 @@ uninstall_firewall()
 remove_v2ray_nginx()
 {
     /etc/nginx/sbin/nginx -s stop
+    sleep 1s
+    pkill nginx
     service v2ray stop
     #service v2ray disable
     rm -rf /usr/bin/v2ray
@@ -941,6 +943,7 @@ get_certs()
     cp /etc/nginx/conf/nginx.conf.default /etc/nginx/conf/nginx.conf
     /etc/nginx/sbin/nginx -s stop
     sleep 1s
+    pkill nginx
     /etc/nginx/sbin/nginx
     case "$2" in
         1)
@@ -953,6 +956,8 @@ get_certs()
             ;;
     esac
     /etc/nginx/sbin/nginx -s stop
+    sleep 1s
+    pkill nginx
 }
 
 #安装程序主体
@@ -1063,7 +1068,7 @@ install_v2ray_ws_tls()
     config_v2ray_vmess
 
 
-    configtls $domain $domainconfig $pretend
+    first_domain $domain $domainconfig $pretend
     get_web $domain $pretend
     /etc/nginx/sbin/nginx
     service v2ray start
@@ -1211,9 +1216,6 @@ get_base_information()
         else
             tlsVersion=2
         fi
-        domain_list=`grep -m 1 server_name /etc/nginx/conf.d/v2ray.conf`
-        domain_list=${domain_list#*"server_name "}
-        domain_list=(${domain_list%;*})
     else
         path=$(cat /dev/urandom | head -c 8 | md5sum | head -c 6)
         path="/$path"
@@ -1247,6 +1249,27 @@ get_web()
     fi
 }
 
+get_domainlist()
+{
+    domain_list=($(grep server_name /etc/nginx/conf.d/v2ray.conf | sed 's/;//g' | awk '{print $2}'))
+    unset domain_list[0]
+    local line
+    for i in ${!domain_list[@]}
+    do
+        line=`grep -n "server_name ${domain_list[i]} www.${domain_list[i]};" /etc/nginx/conf.d/v2ray.conf | awk -F : '{print $1}'`
+        if [ "$line" == "" ]; then
+            line=`grep -n "server_name ${domain_list[i]};" /etc/nginx/conf.d/v2ray.conf | awk -F : '{print $1}'`
+            domainconfig_list[i]=2
+        else
+            domainconfig_list[i]=1
+        fi
+        if awk 'NR=='"$(($line+18))"' {print $0}' /etc/nginx/conf.d/v2ray.conf | grep -q "location / {"; then
+            pretend_list[i]=2
+        else
+            pretend_list[i]=1
+        fi
+    done
+}
 
 #开始菜单
 start_menu()
@@ -1319,6 +1342,25 @@ start_menu()
             install_v2ray_ws_tls
             ;;
         2)
+            if [ $is_installed == 1 ]; then
+                yellow "将卸载现有V2Ray-WebSocket+TLS+Web，获取最新脚本，并重新安装"
+                choice=""
+                while [ "$choice" != "y" ] && [ "$choice" != "n" ]
+                do
+                    tyblue "是否继续？(y/n)"
+                    read choice
+                done
+                if [ $choice == n ]; then
+                    exit 0
+                fi
+            else
+                red "请先安装V2Ray-WebSocket+TLS+Web！！"
+                exit 1
+            fi
+            rm -rf "$0"
+            wget -O "$0" "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2ray-WebSocket(ws)+TLS(1.3)+Web-setup-beta.sh"
+            chmod +x "$0"
+            "$0" --update
             ;;
         3)
             apt -y -f install
@@ -1346,6 +1388,7 @@ start_menu()
             /etc/nginx/sbin/nginx -s stop
             service v2ray stop
             sleep 1s
+            pkill nginx
             service v2ray start
             /etc/nginx/sbin/nginx
             curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1   #激活tcp_fast_open
@@ -1353,14 +1396,20 @@ start_menu()
             ;;
         7)
             /etc/nginx/sbin/nginx -s stop
+            sleep 1s
+            pkill nginx
             service v2ray stop
             green  "v2ray-WebSocket+TLS+Web已停止"
             ;;
         8)
+            if [ $is_installed == 0 ] ; then
+                red "请先安装V2Ray-WebSocket+TLS+Web！！"
+                exit 1
+            fi
             get_base_information
             readDomain
             readTlsConfig
-            configtls $domain $domainconfig $pretend
+            first_domain $domain $domainconfig $pretend
             get_web $domain $pretend
             /etc/nginx/sbin/nginx
             green "重置域名完成！！"
@@ -1380,9 +1429,13 @@ start_menu()
             fi
             ;;
         9)
+            if [ $is_installed == 0 ] ; then
+                red "请先安装V2Ray-WebSocket+TLS+Web！！"
+                exit 1
+            fi
             readDomain
             get_base_information
-            new_domain $domain $domainconfig $pretend
+            add_domain $domain $domainconfig $pretend
             get_web $domain $pretend
             green "添加域名完成！！"
             /etc/nginx/sbin/nginx
@@ -1402,11 +1455,47 @@ start_menu()
             fi
             ;;
         10)
+            if [ $is_installed == 0 ] ; then
+                red "请先安装V2Ray-WebSocket+TLS+Web！！"
+                exit 1
+            fi
+            get_domainlist
+            if [ ${#domain_list[@]} -le 1 ]; then
+                red "只有一个域名"
+            fi
+            tyblue "-----------------------请选择要删除的域名-----------------------"
+            for i in ${!domain_list[@]}
+            do
+                if [ $domainconfig_list[i] == 1 ]; then
+                    echo "${i}. ${domain_list[i]} www.${domain_list[i]}"
+                else
+                    echo "${i}. ${domain_list[i]}"
+                fi
+            done
+            local delete=""
+            while ! [[ $delete =~ ^[1-9][0-9]{0,}$ ]] || [ $delete -gt ${#domain_list[@]} ]
+            do
+                read -p "你的选择是：" delete
+            done
+            rm -rf /etc/nginx/html/${domain_list[$delete]}
+            unset domain_list[$delete]
+            get_base_information
+            local temp=0
+            for i in ${!domain_list[@]}
+            do
+                if [ $temp -eq 0 ]; then
+                    first_domain ${domain_list[i]} ${domainconfig_list[i]} ${pretend_list[i]}
+                else
+                    add_domain ${domain_list[i]} ${domainconfig_list[i]} ${pretend_list[i]}
+                fi
+                ((temp++))
+            done
+            /etc/nginx/sbin/nginx
             ;;
         11)
             if [ $is_installed == 0 ] ; then
                 red "请先安装V2Ray-WebSocket+TLS+Web！！"
-                exit 1;
+                exit 1
             fi
             get_base_information
             choice=""
@@ -1496,12 +1585,12 @@ EOF
         12)
             if [ $is_installed == 0 ] ; then
                 red "请先安装V2Ray-WebSocket+TLS+Web！！"
-                exit 1;
+                exit 1
             fi
             get_base_information
             if [ "$v2id" == "" ] ; then
                 red "socks模式没有ID！！"
-                exit 1;
+                exit 1
             fi
             tyblue "您现在的ID是：$v2id"
             choice=""
@@ -1523,7 +1612,7 @@ EOF
         13)
             if [ $is_installed == 0 ] ; then
                 red "请先安装V2Ray-WebSocket+TLS+Web！！"
-                exit 1;
+                exit 1
             fi
             get_base_information
             tyblue "您现在的path是：$path"
@@ -1543,6 +1632,7 @@ EOF
             service v2ray restart
             /etc/nginx/sbin/nginx -s stop
             sleep 1s
+            pkill nginx
             /etc/nginx/sbin/nginx
             green "更换成功！！"
             green "新path：$new_path"
@@ -1567,5 +1657,8 @@ EOF
     esac
 }
 
-
-start_menu                                     ##从这里脚本开始执行
+if ! [ "$1" == "--update"]; then
+    start_menu
+else
+    install_v2ray_ws_tls
+fi
