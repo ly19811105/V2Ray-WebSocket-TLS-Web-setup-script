@@ -336,8 +336,8 @@ server {
 server {
     listen 443 ssl http2 fastopen=100 reuseport default_server;
     listen [::]:443 ssl http2 fastopen=100 reuseport default_server;
-    ssl_certificate       /root/.acme.sh/${1}_ecc/fullchain.cer;
-    ssl_certificate_key   /root/.acme.sh/${1}_ecc/$1.key;
+    ssl_certificate       $HOME/.acme.sh/${1}_ecc/fullchain.cer;
+    ssl_certificate_key   $HOME/.acme.sh/${1}_ecc/$1.key;
 EOF
     if [ $tlsVersion -eq 1 ]; then
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
@@ -360,8 +360,8 @@ server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
     server_name $1;
-    ssl_certificate       /root/.acme.sh/${1}_ecc/fullchain.cer;
-    ssl_certificate_key   /root/.acme.sh/${1}_ecc/$1.key;
+    ssl_certificate       $HOME/.acme.sh/${1}_ecc/fullchain.cer;
+    ssl_certificate_key   $HOME/.acme.sh/${1}_ecc/$1.key;
 EOF
     if [ $tlsVersion -eq 1 ]; then
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
@@ -376,7 +376,7 @@ EOF
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
     ssl_stapling on;
     ssl_stapling_verify on;
-    ssl_trusted_certificate /root/.acme.sh/${1}_ecc/fullchain.cer;
+    ssl_trusted_certificate $HOME/.acme.sh/${1}_ecc/fullchain.cer;
     add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload" always;
     root /etc/nginx/html/$1;
     location $path {
@@ -415,8 +415,8 @@ server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
     server_name $1;
-    ssl_certificate       /root/.acme.sh/${1}_ecc/fullchain.cer;
-    ssl_certificate_key   /root/.acme.sh/${1}_ecc/${1}.key;
+    ssl_certificate       $HOME/.acme.sh/${1}_ecc/fullchain.cer;
+    ssl_certificate_key   $HOME/.acme.sh/${1}_ecc/${1}.key;
 EOF
     if [ $tlsVersion -eq 1 ]; then
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
@@ -431,7 +431,7 @@ EOF
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
     ssl_stapling on;
     ssl_stapling_verify on;
-    ssl_trusted_certificate /root/.acme.sh/${1}_ecc/fullchain.cer;
+    ssl_trusted_certificate $HOME/.acme.sh/${1}_ecc/fullchain.cer;
     add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload" always;
     root /etc/nginx/html/$1;
     location $path {
@@ -1069,6 +1069,11 @@ install_v2ray_ws_tls()
 
 
     first_domain $domain $domainconfig $pretend
+    if ! [ -e $HOME/.acme.sh/${domain}_ecc/fullchain.cer ]; then
+        yellow "获取证书失败，请检查您的域名，并在安装完成后，使用选项8修复"
+        yellow "按回车键继续。。。"
+        read -s rubbish
+    fi
     get_web $domain $pretend
     /etc/nginx/sbin/nginx
     service v2ray start
@@ -1274,7 +1279,6 @@ get_domainlist()
 #开始菜单
 start_menu()
 {
-    clear
     tyblue "-------------- V2Ray WebSocket(ws)+TLS(1.3)+Web 搭建/管理脚本--------------"
     tyblue " 官网：https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script"
     tyblue "---------------------------------------------------------------------------"
@@ -1410,6 +1414,12 @@ start_menu()
             readDomain
             readTlsConfig
             first_domain $domain $domainconfig $pretend
+            if ! [ -e $HOME/.acme.sh/${domain}_ecc/fullchain.cer ]; then
+                red "获取证书失败，请检查："
+                yellow "1.域名是否正确解析"
+                yellow "2.服务器防火墙的80端口是否打开"
+                exit 1
+            fi
             get_web $domain $pretend
             /etc/nginx/sbin/nginx
             green "重置域名完成！！"
@@ -1436,6 +1446,11 @@ start_menu()
             readDomain
             get_base_information
             add_domain $domain $domainconfig $pretend
+            if ! [ -e $HOME/.acme.sh/${domain}_ecc/fullchain.cer ]; then
+                yellow "获取证书失败，请检查您的域名，并在安装完成后，使用选项8修复"
+                yellow "按回车键继续。。。"
+                read -s rubbish
+            fi
             get_web $domain $pretend
             green "添加域名完成！！"
             /etc/nginx/sbin/nginx
