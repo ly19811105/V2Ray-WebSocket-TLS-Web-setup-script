@@ -1657,7 +1657,7 @@ EOF
     esac
 }
 
-if ! [ "$1" == "--update"]; then
+if ! [ "$1" == "--update" ]; then
     start_menu
 else
     install_v2ray_ws_tls
