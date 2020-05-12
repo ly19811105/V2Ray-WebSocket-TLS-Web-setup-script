@@ -5,19 +5,19 @@ openssl_version=openssl-openssl-3.0.0-alpha1
 #定义几个颜色
 tyblue()                           #天依蓝
 {
-    echo -e "\033[36;1m ${1}\033[0m"
+    echo -e "\033[36;1m${1}\033[0m"
 }
 green()                            #水鸭青
 {
-    echo -e "\033[32;1m ${1}\033[0m"
+    echo -e "\033[32;1m${1}\033[0m"
 }
 yellow()                           #鸭屎黄
 {
-    echo -e "\033[33;1m ${1}\033[0m"
+    echo -e "\033[33;1m${1}\033[0m"
 }
 red()                              #姨妈红
 {
-    echo -e "\033[31;1m ${1}\033[0m"
+    echo -e "\033[31;1m${1}\033[0m"
 }
 
 
@@ -1318,8 +1318,35 @@ get_domainlist()
 #开始菜单
 start_menu()
 {
+    if [ -e /usr/bin/v2ray ]; then
+        local v2ray_status="\033[32m已安装"
+    else
+        local v2ray_status="\033[31m未安装"
+    fi
+    if [ -e /usr/bin/v2ray ] && ps -aux | grep "/usr/bin/v2ray" | grep -v -q grep; then
+        v2ray_status="${v2ray_status}                \033[32m运行中"
+    else
+        v2ray_status="${v2ray_status}                \033[31m未运行"
+    fi
+    if [ $is_installed == 1 ]; then
+        local nginx_status="\033[32m已安装"
+    else
+        local nginx_status="\033[31m未安装"
+    fi
+    if [ $is_installed == 1 ] && ps -aux | grep "/etc/nginx/sbin/nginx" | grep -v -q grep; then
+        nginx_status="${nginx_status}                \033[32m运行中"
+    else
+        nginx_status="${nginx_status}                \033[31m未运行"
+    fi
     tyblue "-------------- V2Ray WebSocket(ws)+TLS(1.3)+Web 搭建/管理脚本--------------"
+    echo
+    tyblue "              V2Ray：            ${v2ray_status}"
+    echo
+    tyblue "              Nginx：            ${nginx_status}"
+    echo
+    echo
     tyblue " 官网：https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script"
+    echo
     tyblue "----------------------------------注意事项---------------------------------"
     yellow " 此脚本需要一个解析到本服务器的域名!!!!"
     tyblue " 推荐服务器系统使用Ubuntu最新版"
