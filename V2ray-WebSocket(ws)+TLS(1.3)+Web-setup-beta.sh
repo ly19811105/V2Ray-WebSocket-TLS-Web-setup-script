@@ -1062,6 +1062,7 @@ install_update_v2ray_ws_tls()
     mkdir /etc/nginx/conf.d
     mkdir /etc/nginx/tcmalloc_temp
     chmod 777 /etc/nginx/tcmalloc_temp
+    cd ..
 ##安装nignx完成
 
 #安装acme.sh
@@ -1108,11 +1109,15 @@ install_update_v2ray_ws_tls()
         done
         mv domain_backup/* /etc/nginx/html
     fi
-    rm -rf /temp_install_update_v2ray_ws_tls
     /etc/nginx/sbin/nginx
     service v2ray start
     curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1   #激活tcp_fast_open
     curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1
+    rm -rf /temp_install_update_v2ray_ws_tls
+    if [ $update == 1 ]; then
+        green "-------------------升级完成-------------------"
+        exit 0
+    fi
     echo -e "\n\n\n"
     tyblue "-------------------安装完成-------------------"
     if [ $domainconfig -eq 1  ]; then
