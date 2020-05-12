@@ -1035,7 +1035,7 @@ install_update_v2ray_ws_tls()
         read -s rubbish
     fi
     tar -zxf ${nginx_version}.tar.gz
-    if ! wget -O ${openssl_version}.tar.gz https://www.openssl.org/source/${openssl_version}.tar.gz ; then
+    if ! wget -O ${openssl_version}.tar.gz https://github.com/openssl/openssl/archive/${openssl_version}.tar.gz ; then
         red    "获取openssl失败"
         yellow "按回车键继续或者按ctrl+c终止"
         read -s rubbish
@@ -1320,7 +1320,7 @@ start_menu()
 {
     tyblue "-------------- V2Ray WebSocket(ws)+TLS(1.3)+Web 搭建/管理脚本--------------"
     tyblue " 官网：https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script"
-    tyblue "---------------------------------------------------------------------------"
+    tyblue "----------------------------------注意事项---------------------------------"
     yellow " 此脚本需要一个解析到本服务器的域名!!!!"
     tyblue " 推荐服务器系统使用Ubuntu最新版"
     yellow " 部分ssh工具会出现退格键无法使用问题，建议先保证退格键正常，再安装"
@@ -1523,9 +1523,9 @@ start_menu()
             for i in ${!domain_list[@]}
             do
                 if [ $domainconfig_list[i] == 1 ]; then
-                    echo "${i}. ${domain_list[i]} www.${domain_list[i]}"
+                    tyblue " ${i}. ${domain_list[i]} www.${domain_list[i]}"
                 else
-                    echo "${i}. ${domain_list[i]}"
+                    tyblue " ${i}. ${domain_list[i]}"
                 fi
             done
             local delete=""
