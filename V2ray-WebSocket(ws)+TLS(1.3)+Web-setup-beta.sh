@@ -961,13 +961,12 @@ get_certs()
 }
 
 #安装程序主体
-install_v2ray_ws_tls()
+install_update_v2ray_ws_tls()
 {
     if ! grep -q "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" /etc/ssh/sshd_config ; then
         setsshd
     fi
     apt -y -f install
-    remove_v2ray_nginx
     apt update
     uninstall_firewall
     doupdate
@@ -981,13 +980,21 @@ install_v2ray_ws_tls()
         echo 'net.ipv4.tcp_fastopen = 3' >> /etc/sysctl.conf
         sysctl -p
     fi
+    rm -rf /temp_install_update_v2ray_ws_tls
+    mkdir /temp_install_update_v2ray_ws_tls
+    cd /temp_install_update_v2ray_ws_tls
     install_bbr
     apt -y -f install
     apt -y --purge autoremove
     yum -y autoremove
     #读取域名
-    readDomain
-    readTlsConfig
+    if [ $update == 0 ]; then
+        readDomain
+        readTlsConfig
+    else
+        get_domainlist
+        get_base_information
+    fi
     yum install -y gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make
     ##libxml2-devel非必须
     if [ "$release" == "ubuntu" ] && version_ge $systemVersion 20.04; then
@@ -1011,12 +1018,17 @@ install_v2ray_ws_tls()
     apt clean
     yum clean all
 
-
+    if [ $update == 1 ]; then
+        mkdir domain_backup
+        for i in ${!domain_list[@]}
+        do
+            if [ ${pretend_list[i]} == 1 ]; then
+                mv /etc/nginx/html/${domain_list[i]} domain_backup
+            fi
+        done
+    fi
+    remove_v2ray_nginx
 ##安装nginx
-    rm -rf ${nginx_version}.tar.gz
-    rm -rf ${openssl_version}.tar.gz
-    rm -rf $openssl_version
-    rm -rf ${nginx_version}
     if ! wget -O ${nginx_version}.tar.gz https://nginx.org/download/${nginx_version}.tar.gz ; then
         red    "获取nginx失败"
         yellow "按回车键继续或者按ctrl+c终止"
@@ -1050,11 +1062,6 @@ install_v2ray_ws_tls()
     mkdir /etc/nginx/conf.d
     mkdir /etc/nginx/tcmalloc_temp
     chmod 777 /etc/nginx/tcmalloc_temp
-    cd ..
-    rm -rf ${nginx_version}.tar.gz
-    rm -rf ${openssl_version}.tar.gz
-    rm -rf $openssl_version
-    rm -rf ${nginx_version}
 ##安装nignx完成
 
 #安装acme.sh
@@ -1062,19 +1069,46 @@ install_v2ray_ws_tls()
     $HOME/.acme.sh/acme.sh --upgrade --auto-upgrade
 
     bash <(curl -L -s https://install.direct/go.sh)
-    bash <(curl -L -s https://install.direct/go.sh)
-    service v2ray stop
-    get_base_information
-    config_v2ray_vmess
-
-
-    first_domain $domain $domainconfig $pretend
-    if ! [ -e $HOME/.acme.sh/${domain}_ecc/fullchain.cer ]; then
-        yellow "获取证书失败，请检查您的域名，并在安装完成后，使用选项8修复"
-        yellow "按回车键继续。。。"
-        read -s rubbish
+    if ! [ -e /usr/bin/v2ray ] || ! [ -e /etc/v2ray/config.json ]; then
+        bash <(curl -L -s https://install.direct/go.sh)
+        if ! [ -e /usr/bin/v2ray ] || ! [ -e /etc/v2ray/config.json ]; then
+            yellow "v2ray安装失败"
+            yellow "按回车键继续或者按ctrl+c终止"
+            read -s
+        fi
     fi
-    get_web $domain $pretend
+    service v2ray stop
+    if [ $update == 0 ]; then
+        get_base_information
+    fi
+    if [ "$v2id" == "" ]; then
+        config_v2ray_socks
+    else
+        config_v2ray_vmess
+    fi
+
+    if [ $update == 0 ]; then
+        first_domain $domain $domainconfig $pretend
+        if ! [ -e $HOME/.acme.sh/${domain}_ecc/fullchain.cer ]; then
+            yellow "获取证书失败，请检查您的域名，并在安装完成后，使用选项8修复"
+            yellow "按回车键继续。。。"
+            read -s rubbish
+        fi
+        get_web $domain $pretend
+    else
+        local temp=0
+        for i in ${!domain_list[@]}
+        do
+            if [ $temp -eq 0 ]; then
+                first_domain ${domain_list[i]} ${domainconfig_list[i]} ${pretend_list[i]}
+            else
+                add_domain ${domain_list[i]} ${domainconfig_list[i]} ${pretend_list[i]}
+            fi
+            ((temp++))
+        done
+        mv domain_backup/* /etc/nginx/html
+    fi
+    rm -rf /temp_install_update_v2ray_ws_tls
     /etc/nginx/sbin/nginx
     service v2ray start
     curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1   #激活tcp_fast_open
@@ -1343,20 +1377,17 @@ start_menu()
                     exit 0
                 fi
             fi
-            install_v2ray_ws_tls
+            install_update_v2ray_ws_tls
             ;;
         2)
             if [ $is_installed == 1 ]; then
-                yellow "将卸载现有V2Ray-WebSocket+TLS+Web，获取最新脚本，并重新安装"
-                choice=""
-                while [ "$choice" != "y" ] && [ "$choice" != "n" ]
-                do
-                    tyblue "是否继续？(y/n)"
-                    read choice
-                done
-                if [ $choice == n ]; then
-                    exit 0
+                if [ $release == ubuntu ]; then
+                    yellow "升级bbr/系统可能需要重启，重启后请再次选择'升级V2Ray-WebSocket+TLS+Web'"
+                else
+                    yellow "升级bbr可能需要重启，重启后请再次选择'升级V2Ray-WebSocket+TLS+Web'"
                 fi
+                yellow "按回车键继续，或者ctrl+c中止"
+                read -s
             else
                 red "请先安装V2Ray-WebSocket+TLS+Web！！"
                 exit 1
@@ -1368,7 +1399,11 @@ start_menu()
             ;;
         3)
             apt -y -f install
+            rm -rf /temp_install_update_v2ray_ws_tls
+            mkdir /temp_install_update_v2ray_ws_tls
+            cd /temp_install_update_v2ray_ws_tls
             install_bbr
+            rm -rf /temp_install_update_v2ray_ws_tls
             ;;
         4)
             if ! bash <(curl -L -s https://install.direct/go.sh) ; then
@@ -1477,6 +1512,7 @@ start_menu()
             get_domainlist
             if [ ${#domain_list[@]} -le 1 ]; then
                 red "只有一个域名"
+                exit 1
             fi
             tyblue "-----------------------请选择要删除的域名-----------------------"
             for i in ${!domain_list[@]}
@@ -1673,7 +1709,9 @@ EOF
 }
 
 if ! [ "$1" == "--update" ]; then
+    update=0
     start_menu
 else
-    install_v2ray_ws_tls
+    update=1
+    install_update_v2ray_ws_tls
 fi
