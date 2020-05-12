@@ -495,7 +495,7 @@ doupdate()
             red "检测到ssh端口号被修改"
             red "升级系统后ssh端口号将恢复默认值(22)"
             yellow "按回车键继续。。。"
-            read -s rubbish
+            read -s
         fi
         apt -y dist-upgrade
         apt -y --purge autoremove
@@ -526,9 +526,9 @@ doupdate()
     echo -e "\n\n\n"
     tyblue "-----------------------是否将更新系统组件？-----------------------"
     if [ "$release" == "ubuntu" ]; then
-        green  "1.更新已安装软件，并升级系统(仅对ubuntu有效)"
-        green  "2.仅更新已安装软件"
-        red    "3.不更新"
+        green  " 1. 更新已安装软件，并升级系统(仅对ubuntu有效)"
+        green  " 2. 仅更新已安装软件"
+        red    " 3. 不更新"
         if [ $mem_ok == 2 ]; then
             echo
             yellow "如果要升级系统，请确保服务器的内存大于等于512MB"
@@ -538,8 +538,8 @@ doupdate()
             red "检测到内存过小，升级系统可能导致无法开机，请谨慎选择"
         fi
     else
-        green  "1.仅更新已安装软件"
-        red    "2.不更新"
+        green  " 1. 仅更新已安装软件"
+        red    " 2. 不更新"
     fi
     tyblue "------------------------------------------------------------------"
     echo
@@ -551,10 +551,10 @@ doupdate()
     if [[ "$release" == "ubuntu" && "$choice" == "1" ]] ; then
         updateSystem
     elif [[ "$release" == "ubuntu" && "$choice" == "2" || "$release" == "centos" && "$choice" == "1" ]]; then
-        tyblue "----------------即将开始更新已安装软件----------------"
-        yellow "更新过程中若有问话/对话框，如果看不懂，优先选择yes/y/第一个选项"
-        yellow "按回车键继续。。。"
-        read -s rubbish
+        tyblue "-----------------------即将开始更新-----------------------"
+        yellow " 更新过程中若有问话/对话框，优先选择yes/y/第一个选项"
+        yellow " 按回车键继续。。。"
+        read -s
         yum -y update
         apt -y dist-upgrade
         apt -y --purge autoremove
@@ -689,22 +689,23 @@ install_bbr()
         1)
             if [ $mem_ok == 2 ]; then
                 red "请确保服务器的内存>=512MB，否则更换最新版内核可能无法开机"
-                yellow "按回车键以继续。。。"
-                read -s rubbish
+                yellow "按回车键继续或ctrl+c中止"
+                read -s
                 echo
             elif [ $mem_ok == 0 ]; then 
-                red "内存过小，更换最新版内核可能无法开机"
-                yellow "按回车键以继续。。。"
-                read -s rubbish
+                red "检测到内存过小，更换最新版内核可能无法开机，请谨慎选择"
+                yellow "按回车键以继续或ctrl+c中止"
+                read -s
                 echo
             fi
-            yellow "此操作将会更换最新内核，并开启bbr"
-            yellow "若最新版内核安装失败，可以尝试："
-            yellow "1.更换Ubuntu系统"
-            yellow "2.更换更新版本的系统"
-            yellow "3.选择2选项，或者使用bbr2/bbrplus"
-            yellow "按回车键以继续。。。"
-            read -s rubbish
+            tyblue "------------注意事项------------"
+            yellow " 若最新版内核安装失败，可以尝试："
+            yellow "  1. 更换Ubuntu系统"
+            yellow "  2. 更换更新版本的系统"
+            yellow "  3. 选择2选项，或者使用bbr2/bbrplus"
+            echo
+            yellow " 按回车键以继续。。。"
+            read -s
             sed -i '/net.core.default_qdisc/d' /etc/sysctl.conf
             sed -i '/net.ipv4.tcp_congestion_control/d' /etc/sysctl.conf
             echo 'net.core.default_qdisc = fq' >> /etc/sysctl.conf
@@ -714,7 +715,7 @@ install_bbr()
             if ! wget https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/update-kernel.sh ; then
                 red    "获取内核升级脚本失败"
                 yellow "按回车键继续或者按ctrl+c终止"
-                read -s rubbish
+                read -s
             fi
             chmod +x update-kernel.sh
             ./update-kernel.sh
@@ -739,7 +740,7 @@ install_bbr()
                 if ! wget https://github.com/teddysun/across/raw/master/bbr.sh ; then
                     red    "获取bbr脚本失败"
                     yellow "按回车键继续或者按ctrl+c终止"
-                    read -s rubbish
+                    read -s
                 fi
                 chmod +x bbr.sh
                 ./bbr.sh
@@ -750,21 +751,21 @@ install_bbr()
             ;;
         3)
             tyblue "--------------------即将安装bbr2加速，安装完成后服务器将会重启--------------------"
-            tyblue "重启后，请再次选择这个选项完成bbr2剩余部分安装(开启bbr和ECN)"
-            yellow "按回车键以继续。。。。"
-            read -s rubbish
+            tyblue " 重启后，请再次选择这个选项完成bbr2剩余部分安装(开启bbr和ECN)"
+            yellow " 按回车键以继续。。。。"
+            read -s
             rm -rf bbr2.sh
             if [ $release == ubuntu ] || [ $release == debian ]; then
                 if ! wget https://github.com/yeyingorg/bbr2.sh/raw/master/bbr2.sh ; then
                     red    "获取bbr2脚本失败"
                     yellow "按回车键继续或者按ctrl+c终止"
-                    read -s rubbish
+                    read -s
                 fi
             else
                 if ! wget https://github.com/jackjieYYY/bbr2/raw/master/bbr2.sh ; then
                     red    "获取bbr2脚本失败"
                     yellow "按回车键继续或者按ctrl+c终止"
-                    read -s rubbish
+                    read -s
                 fi
             fi
             chmod +x bbr2.sh
@@ -776,15 +777,15 @@ install_bbr()
             if ! wget "https://raw.githubusercontent.com/chiakge/Linux-NetSpeed/master/tcp.sh" ; then
                 red    "获取bbrplus脚本失败"
                 yellow "按回车键继续或者按ctrl+c终止"
-                read -s rubbish
+                read -s
             fi
             chmod +x tcp.sh
             ./tcp.sh
             install_bbr
             ;;
         5)
-            tyblue "该操作将会卸载除现在正在使用的内核外的其余内核"
-            tyblue "您正在使用的内核是：$(uname -r)"
+            tyblue " 该操作将会卸载除现在正在使用的内核外的其余内核"
+            tyblue "    您正在使用的内核是：$(uname -r)"
             choice=""
             while [[ "$choice" != "y" && "$choice" != "n" ]]
             do
@@ -821,7 +822,7 @@ remove_other_kernel()
         if [ "$ok_install" -lt "1" ] ; then
             red "未发现正在使用的内核，可能已经被卸载"
             yellow "按回车键继续。。。"
-            read -s rubbish
+            read -s
             return 1
         fi
         ok_install=0
@@ -835,7 +836,7 @@ remove_other_kernel()
         if [ "$ok_install" -lt "1" ] ; then
             red "未发现正在使用的内核，可能已经被卸载"
             yellow "按回车键继续。。。"
-            read -s rubbish
+            read -s
             return 1
         fi
         apt -y purge ${kernel_list_image[@]} ${kernel_list_modules[@]}
@@ -856,7 +857,7 @@ remove_other_kernel()
         if [ "$ok_install" -lt "1" ] ; then
             red "未发现正在使用的内核，可能已经被卸载"
             yellow "按回车键继续。。。"
-            read -s rubbish
+            read -s
             return 1
         fi
         ok_install=0
@@ -870,7 +871,7 @@ remove_other_kernel()
         if [ "$ok_install" -lt "1" ] ; then
             red "未发现正在使用的内核，可能已经被卸载"
             yellow "按回车键继续。。。"
-            read -s rubbish
+            read -s
             return 1
         fi
         ok_install=0
@@ -884,7 +885,7 @@ remove_other_kernel()
         if [ "$ok_install" -lt "1" ] ; then
             red "未发现正在使用的内核，可能已经被卸载"
             yellow "按回车键继续。。。"
-            read -s rubbish
+            read -s
             return 1
         fi
         ok_install=0
@@ -898,7 +899,7 @@ remove_other_kernel()
         if [ "$ok_install" -lt "1" ] ; then
             red "未发现正在使用的内核，可能已经被卸载"
             yellow "按回车键继续。。。"
-            read -s rubbish
+            read -s
             return 1
         fi
         yum -y remove ${kernel_list[@]} ${kernel_list_modules[@]} ${kernel_list_core[@]} ${kernel_list_devel[@]}
@@ -1032,13 +1033,13 @@ install_update_v2ray_ws_tls()
     if ! wget -O ${nginx_version}.tar.gz https://nginx.org/download/${nginx_version}.tar.gz ; then
         red    "获取nginx失败"
         yellow "按回车键继续或者按ctrl+c终止"
-        read -s rubbish
+        read -s
     fi
     tar -zxf ${nginx_version}.tar.gz
     if ! wget -O ${openssl_version}.tar.gz https://github.com/openssl/openssl/archive/${openssl_version#*-}.tar.gz ; then
         red    "获取openssl失败"
         yellow "按回车键继续或者按ctrl+c终止"
-        read -s rubbish
+        read -s
     fi
     tar -zxf ${openssl_version}.tar.gz
     cd ${openssl_version}
@@ -1093,7 +1094,7 @@ install_update_v2ray_ws_tls()
         if ! [ -e $HOME/.acme.sh/${domain}_ecc/fullchain.cer ]; then
             yellow "获取证书失败，请检查您的域名，并在安装完成后，使用选项8修复"
             yellow "按回车键继续。。。"
-            read -s rubbish
+            read -s
         fi
         get_web $domain $pretend
     else
@@ -1340,9 +1341,9 @@ start_menu()
     fi
     tyblue "-------------- V2Ray WebSocket(ws)+TLS(1.3)+Web 搭建/管理脚本--------------"
     echo
-    tyblue "              V2Ray：            ${v2ray_status}"
+    tyblue "            V2Ray：            ${v2ray_status}"
     echo
-    tyblue "              Nginx：            ${nginx_status}"
+    tyblue "            Nginx：            ${nginx_status}"
     echo
     echo
     tyblue " 官网：https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script"
@@ -1516,7 +1517,7 @@ start_menu()
             if ! [ -e $HOME/.acme.sh/${domain}_ecc/fullchain.cer ]; then
                 yellow "获取证书失败，请检查您的域名，并在安装完成后，使用选项8修复"
                 yellow "按回车键继续。。。"
-                read -s rubbish
+                read -s
             fi
             get_web $domain $pretend
             green "添加域名完成！！"
@@ -1724,7 +1725,7 @@ EOF
             echo
             yellow "尝试修复退格键异常问题，退格键正常请不要修复"
             yellow "按回车键继续或按Ctrl+c退出"
-            read -s rubbish
+            read -s
             if stty -a | grep -q 'erase = ^?' ; then
                 stty erase '^H'
             elif stty -a | grep -q 'erase = ^H' ; then
