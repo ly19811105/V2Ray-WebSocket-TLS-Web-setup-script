@@ -1301,9 +1301,9 @@ get_domainlist()
     local line
     for i in ${!domain_list[@]}
     do
-        line=`grep -n "server_name ${domain_list[i]} www.${domain_list[i]};" /etc/nginx/conf.d/v2ray.conf | awk -F : '{print $1}'`
+        line=`grep -n "server_name ${domain_list[i]} www.${domain_list[i]};" /etc/nginx/conf.d/v2ray.conf | tail -n 1 | awk -F : '{print $1}'`
         if [ "$line" == "" ]; then
-            line=`grep -n "server_name ${domain_list[i]};" /etc/nginx/conf.d/v2ray.conf | awk -F : '{print $1}'`
+            line=`grep -n "server_name ${domain_list[i]};" /etc/nginx/conf.d/v2ray.conf | tail -n 1 | awk -F : '{print $1}'`
             domainconfig_list[i]=2
         else
             domainconfig_list[i]=1
