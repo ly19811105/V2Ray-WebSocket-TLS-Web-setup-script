@@ -514,11 +514,11 @@ doupdate()
                 do-release-upgrade
                 ;;
             2)
-                sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
                 do-release-upgrade
                 do-release-upgrade
                 ;;
             3)
+                sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
                 do-release-upgrade
                 do-release-upgrade
                 ;;
@@ -542,11 +542,11 @@ doupdate()
                 do-release-upgrade
                 ;;
             2)
-                sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
                 do-release-upgrade
                 do-release-upgrade
                 ;;
             3)
+                sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
                 do-release-upgrade
                 do-release-upgrade
                 ;;
