@@ -497,19 +497,48 @@ doupdate()
             yellow "按回车键继续。。。"
             read -s
         fi
-        apt -y dist-upgrade
-        apt -y --purge autoremove
-        apt clean
         echo '[DEFAULT]' > /etc/update-manager/release-upgrades
-        echo 'Prompt=lts' >> /etc/update-manager/release-upgrades
+        echo 'Prompt=normal' >> /etc/update-manager/release-upgrades
         case "$choice" in
             1)
                 do-release-upgrade -d
                 do-release-upgrade -d
-                do-release-upgrade
-                do-release-upgrade
-                sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
+                sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
                 do-release-upgrade -d
+                do-release-upgrade -d
+                sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
+                do-release-upgrade
+                do-release-upgrade
+                sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
+                do-release-upgrade
+                do-release-upgrade
+                ;;
+            2)
+                sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
+                do-release-upgrade
+                do-release-upgrade
+                ;;
+            3)
+                do-release-upgrade
+                do-release-upgrade
+                ;;
+        esac
+        apt update
+        apt -y dist-upgrade
+        echo '[DEFAULT]' > /etc/update-manager/release-upgrades
+        echo 'Prompt=normal' >> /etc/update-manager/release-upgrades
+        case "$choice" in
+            1)
+                do-release-upgrade -d
+                do-release-upgrade -d
+                sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
+                do-release-upgrade -d
+                do-release-upgrade -d
+                sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
+                do-release-upgrade
+                do-release-upgrade
+                sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
+                do-release-upgrade
                 do-release-upgrade
                 ;;
             2)
@@ -556,6 +585,7 @@ doupdate()
         yellow " 按回车键继续。。。"
         read -s
         yum -y update
+        apt update
         apt -y dist-upgrade
         apt -y --purge autoremove
         apt clean
@@ -968,7 +998,6 @@ install_update_v2ray_ws_tls()
         setsshd
     fi
     apt -y -f install
-    apt update
     uninstall_firewall
     doupdate
     uninstall_firewall
