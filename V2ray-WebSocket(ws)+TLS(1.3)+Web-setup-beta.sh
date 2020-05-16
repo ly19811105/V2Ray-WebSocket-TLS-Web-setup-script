@@ -518,6 +518,7 @@ doupdate()
                     sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
                     do-release-upgrade -d
                     do-release-upgrade -d
+                    sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
                 fi
                 do-release-upgrade
                 do-release-upgrade
@@ -535,7 +536,7 @@ doupdate()
         fi
         apt update
         apt -y dist-upgrade
-        echo '[DEFAULT]' > /etc/update-manager/release-upgrades
+        sed -i '/Prompt/d' /etc/update-manager/release-upgrades
         echo 'Prompt=normal' >> /etc/update-manager/release-upgrades
         case "$choice" in
             1)
@@ -556,6 +557,7 @@ doupdate()
                     sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
                     do-release-upgrade -d
                     do-release-upgrade -d
+                    sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
                 fi
                 do-release-upgrade
                 do-release-upgrade
