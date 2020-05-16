@@ -523,6 +523,11 @@ doupdate()
                 do-release-upgrade
                 ;;
         esac
+        if ! version_ge $systemVersion 20.04; then
+            sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
+            do-release-upgrade -d
+            do-release-upgrade -d
+        fi
         apt update
         apt -y dist-upgrade
         echo '[DEFAULT]' > /etc/update-manager/release-upgrades
@@ -551,6 +556,11 @@ doupdate()
                 do-release-upgrade
                 ;;
         esac
+        if ! version_ge $systemVersion 20.04; then
+            sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
+            do-release-upgrade -d
+            do-release-upgrade -d
+        fi
     }
     echo -e "\n\n\n"
     tyblue "-----------------------是否将更新系统组件？-----------------------"
