@@ -493,7 +493,7 @@ doupdate()
         done
         if [ "$(cat /etc/ssh/sshd_config |grep -i "^port " | awk '{print $2}')" != "22" ] && [ "$(cat /etc/ssh/sshd_config |grep -i "^port " | awk '{print $2}')" != "" ]; then
             red "检测到ssh端口号被修改"
-            red "升级系统后ssh端口号将恢复默认值(22)"
+            red "升级系统后ssh端口号可能恢复默认值(22)"
             yellow "按回车键继续。。。"
             read -s
         fi
@@ -514,6 +514,11 @@ doupdate()
                 do-release-upgrade
                 ;;
             2)
+                if do-release-upgrade -c | grep -q "19\.10"; then
+                    sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
+                    do-release-upgrade -d
+                    do-release-upgrade -d
+                fi
                 do-release-upgrade
                 do-release-upgrade
                 ;;
@@ -547,6 +552,11 @@ doupdate()
                 do-release-upgrade
                 ;;
             2)
+                if do-release-upgrade -c | grep -q "19\.10"; then
+                    sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
+                    do-release-upgrade -d
+                    do-release-upgrade -d
+                fi
                 do-release-upgrade
                 do-release-upgrade
                 ;;
@@ -953,9 +963,9 @@ setsshd()
 {
     echo
     tyblue "------------------------------------------"
-    tyblue "安装可能需要比较长的时间(5-40分钟)"
-    tyblue "如果和ssh断开连接将会很麻烦"
-    tyblue "设置ssh连接超时时间将大大降低断连可能性"
+    tyblue " 安装可能需要比较长的时间(5-40分钟)"
+    tyblue " 如果和ssh断开连接将会很麻烦"
+    tyblue " 设置ssh连接超时时间将大大降低断连可能性"
     tyblue "------------------------------------------"
     choice=""
     while [ "$choice" != "y" -a "$choice" != "n" ]
@@ -970,8 +980,8 @@ setsshd()
         echo "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" >> /etc/ssh/sshd_config
         service sshd restart
         green  "----------------------配置完成----------------------"
-        tyblue "请重新进行ssh连接，然后再次运行此脚本"
-        yellow "按回车键退出。。。。"
+        tyblue " 请重新进行ssh连接，然后再次运行此脚本"
+        yellow " 按回车键退出。。。。"
         read asfyerbsd
         exit 0
     fi
