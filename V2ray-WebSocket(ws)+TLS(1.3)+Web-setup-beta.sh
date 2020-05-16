@@ -497,7 +497,7 @@ doupdate()
             yellow "按回车键继续。。。"
             read -s
         fi
-        echo '[DEFAULT]' > /etc/update-manager/release-upgrades
+        sed -i '/Prompt/d' /etc/update-manager/release-upgrades
         echo 'Prompt=normal' >> /etc/update-manager/release-upgrades
         case "$choice" in
             1)
@@ -1051,11 +1051,18 @@ install_update_v2ray_ws_tls()
     else
         apt -y install gcc g++
     fi
-    apt install -y libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make
+    if ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make; then
+        apt update
+        if ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make; then
+            yellow "依赖安装失败"
+            yellow "按回车键继续或者ctrl+c退出"
+            read -s
+        fi
+    fi
     ##libxml2-dev非必须
     apt -y --purge autoremove
-    yum -y autoremove
     apt clean
+    yum -y autoremove
     yum clean all
 
     if [ $update == 1 ]; then
