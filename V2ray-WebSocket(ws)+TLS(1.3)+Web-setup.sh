@@ -1384,8 +1384,10 @@ start_menu()
     fi
     if [ -e /usr/bin/v2ray ] && ps -aux | grep "/usr/bin/v2ray" | grep -v -q grep; then
         v2ray_status="${v2ray_status}                \033[32m运行中"
+        v2ray_status[1]=1
     else
         v2ray_status="${v2ray_status}                \033[31m未运行"
+        v2ray_status[1]=0
     fi
     if [ $is_installed == 1 ]; then
         local nginx_status="\033[32m已安装"
@@ -1394,8 +1396,10 @@ start_menu()
     fi
     if [ $is_installed == 1 ] && ps -aux | grep "/etc/nginx/sbin/nginx" | grep -v -q grep; then
         nginx_status="${nginx_status}                \033[32m运行中"
+        nginx_status[1]=1
     else
         nginx_status="${nginx_status}                \033[31m未运行"
+        nginx_status[1]=0
     fi
     tyblue "-------------- V2Ray WebSocket(ws)+TLS(1.3)+Web 搭建/管理脚本--------------"
     echo
@@ -1427,7 +1431,11 @@ start_menu()
     red    "   5. 卸载V2Ray-WebSocket+TLS+Web"
     echo
     tyblue " --------------启动/停止-------------"
-    tyblue "   6. 重启/启动V2Ray-WebSocket+TLS+Web(对于玄学断连/掉速有奇效)"
+    if [ ${v2ray_status[1]} -eq 1 ] && [ ${nginx_status[1]} -eq 1 ]; then
+        tyblue "   6. 重新启动V2Ray-WebSocket+TLS+Web(对于玄学断连/掉速有奇效)"
+    else
+        tyblue "   6. 启动V2Ray-WebSocket+TLS+Web(对于玄学断连/掉速有奇效)"
+    fi
     tyblue "   7. 停止V2Ray-WebSocket+TLS+Web"
     echo
     tyblue " ----------------管理----------------"
@@ -1512,7 +1520,7 @@ start_menu()
                 exit 0
             fi
             remove_v2ray_nginx
-            green  "v2ray-WebSocket+TLS+Web已删除"
+            green  "----------------V2ray-WebSocket+TLS+Web已删除----------------"
             ;;
         6)
             /etc/nginx/sbin/nginx -s stop
@@ -1522,14 +1530,18 @@ start_menu()
             service v2ray start
             /etc/nginx/sbin/nginx
             curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1   #激活tcp_fast_open
-            green  "重启完成"
+            if [ ${v2ray_status[1]} -eq 1 ] && [ ${nginx_status[1]} -eq 1 ]; then
+                green "--------------------------重启完成--------------------------"
+            else
+                green "----------------V2ray-WebSocket+TLS+Web已启动---------------"
+            fi
             ;;
         7)
             /etc/nginx/sbin/nginx -s stop
             sleep 1s
             pkill nginx
             service v2ray stop
-            green  "v2ray-WebSocket+TLS+Web已停止"
+            green  "----------------V2ray-WebSocket+TLS+Web已停止----------------"
             ;;
         8)
             if [ $is_installed == 0 ] ; then
@@ -1642,8 +1654,11 @@ start_menu()
             get_base_information
             choice=""
             if grep -q "id" /etc/v2ray/config.json ; then
-                tyblue "此操作将会把底层协议修改为socks(5)"
-                tyblue "关于这么做的意义，参考https://github.com/v2ray/discussion/issues/513"
+                tyblue "----------------------修改底层协议为socks(5)----------------------"
+                tyblue " socks协议可以很大降低cpu占用率，略微同时降低延迟"
+                tyblue " 但是在网络环境较差的条件下，vmess协议的传输速率和稳定性更强"
+                tyblue " 更多信息见：https://github.com/v2ray/discussion/issues/513"
+                echo
                 while [ "$choice" != "y" -a "$choice" != "n" ]
                 do
                     tyblue "是否要继续?(y/n)"
