@@ -1,6 +1,6 @@
 #!/bin/bash
 nginx_version=nginx-1.18.0
-openssl_version=openssl-openssl-3.0.0-alpha1
+openssl_version=openssl-openssl-3.0.0-alpha2
 
 #定义几个颜色
 tyblue()                           #天依蓝
@@ -1520,7 +1520,7 @@ start_menu()
                 exit 0
             fi
             remove_v2ray_nginx
-            green  "V2ray-WebSocket+TLS+Web已删除"
+            green  "----------------V2ray-WebSocket+TLS+Web已删除----------------"
             ;;
         6)
             /etc/nginx/sbin/nginx -s stop
@@ -1541,7 +1541,7 @@ start_menu()
             sleep 1s
             pkill nginx
             service v2ray stop
-            green  "V2ray-WebSocket+TLS+Web已停止"
+            green  "----------------V2ray-WebSocket+TLS+Web已停止----------------"
             ;;
         8)
             if [ $is_installed == 0 ] ; then
