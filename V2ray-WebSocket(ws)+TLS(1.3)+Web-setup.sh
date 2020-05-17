@@ -1,6 +1,6 @@
 #!/bin/bash
 nginx_version=nginx-1.18.0
-openssl_version=openssl-openssl-3.0.0-alpha1
+openssl_version=openssl-openssl-3.0.0-alpha2
 
 #定义几个颜色
 tyblue()                           #天依蓝
@@ -1100,9 +1100,6 @@ install_update_v2ray_ws_tls()
         read -s
     fi
     tar -zxf ${openssl_version}.tar.gz
-    cd ${openssl_version}
-    sed -i 's#"OpenSSL {- "$config{full_version} $config{release_date}" -}"#"OpenSSL {- "$config{full_version}" -}"#g' include/openssl/opensslv.h.in
-    cd ..
     cd ${nginx_version}
     sed -i 's# -g # #g' `grep " \-g " -rl auto`
     sed -i 's# -g"# "#g' `grep " \-g\"" -rl auto`
@@ -1492,7 +1489,7 @@ start_menu()
                 exit 1
             fi
             rm -rf "$0"
-            wget -O "$0" "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
+            wget -O "$0" "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2ray-WebSocket(ws)+TLS(1.3)+Web-setup-beta.sh"
             chmod +x "$0"
             "$0" --update
             ;;
