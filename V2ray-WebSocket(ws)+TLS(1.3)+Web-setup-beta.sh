@@ -336,17 +336,17 @@ server {
 server {
     listen 443 ssl http2 fastopen=100 reuseport default_server;
     listen [::]:443 ssl http2 fastopen=100 reuseport default_server;
-    ssl_certificate       $HOME/.acme.sh/${1}_ecc/fullchain.cer;
-    ssl_certificate_key   $HOME/.acme.sh/${1}_ecc/$1.key;
+    ssl_certificate         /etc/nginx/certs/$1.cer;
+    ssl_certificate_key     /etc/nginx/certs/$1.key;
 EOF
     if [ $tlsVersion -eq 1 ]; then
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
-    ssl_protocols         TLSv1.3 TLSv1.2;
-    ssl_ciphers           ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
+    ssl_protocols           TLSv1.3 TLSv1.2;
+    ssl_ciphers             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
 EOF
     else
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
-    ssl_protocols         TLSv1.3;
+    ssl_protocols           TLSv1.3;
 EOF
     fi
     if [ $2 -eq 1 ]; then
@@ -360,23 +360,23 @@ server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
     server_name $1;
-    ssl_certificate       $HOME/.acme.sh/${1}_ecc/fullchain.cer;
-    ssl_certificate_key   $HOME/.acme.sh/${1}_ecc/$1.key;
+    ssl_certificate         /etc/nginx/certs/$1.cer;
+    ssl_certificate_key     /etc/nginx/certs/$1.key;
 EOF
     if [ $tlsVersion -eq 1 ]; then
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
-    ssl_protocols         TLSv1.3 TLSv1.2;
-    ssl_ciphers           ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
+    ssl_protocols           TLSv1.3 TLSv1.2;
+    ssl_ciphers             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
 EOF
     else
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
-    ssl_protocols         TLSv1.3;
+    ssl_protocols           TLSv1.3;
 EOF
     fi
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
-    ssl_stapling on;
-    ssl_stapling_verify on;
-    ssl_trusted_certificate $HOME/.acme.sh/${1}_ecc/fullchain.cer;
+    ssl_stapling            on;
+    ssl_stapling_verify     on;
+    ssl_trusted_certificate /etc/nginx/certs/$1.cer;
     add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload" always;
     root /etc/nginx/html/$1;
     location $path {
@@ -415,23 +415,23 @@ server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
     server_name $1;
-    ssl_certificate       $HOME/.acme.sh/${1}_ecc/fullchain.cer;
-    ssl_certificate_key   $HOME/.acme.sh/${1}_ecc/${1}.key;
+    ssl_certificate         /etc/nginx/certs/$1.cer;
+    ssl_certificate_key     /etc/nginx/certs/$1.key;
 EOF
     if [ $tlsVersion -eq 1 ]; then
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
-    ssl_protocols         TLSv1.3 TLSv1.2;
-    ssl_ciphers           ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
+    ssl_protocols           TLSv1.3 TLSv1.2;
+    ssl_ciphers             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
 EOF
     else
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
-    ssl_protocols         TLSv1.3;
+    ssl_protocols           TLSv1.3;
 EOF
     fi
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
-    ssl_stapling on;
-    ssl_stapling_verify on;
-    ssl_trusted_certificate $HOME/.acme.sh/${1}_ecc/fullchain.cer;
+    ssl_stapling            on;
+    ssl_stapling_verify     on;
+    ssl_trusted_certificate /etc/nginx/certs/$1.cer;
     add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload" always;
     root /etc/nginx/html/$1;
     location $path {
@@ -1008,6 +1008,7 @@ get_certs()
             $HOME/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html -k ec-256 --ocsp
             ;;
     esac
+    $HOME/.acme.sh/acme.sh --installcert -d $1 --key-file /etc/nginx/certs/$1.key --fullchain-file /etc/nginx/certs/$1.cer --reloadcmd "/etc/nginx/sbin/nginx -s stop && echo renewing domain certs && sleep 1s && pkill nginx && /etc/nginx/sbin/nginx" --ecc
     /etc/nginx/sbin/nginx -s stop
     sleep 1s
     pkill nginx
@@ -1100,9 +1101,6 @@ install_update_v2ray_ws_tls()
         read -s
     fi
     tar -zxf ${openssl_version}.tar.gz
-    #cd ${openssl_version}
-    #sed -i 's#"OpenSSL {- "$config{full_version} $config{release_date}" -}"#"OpenSSL {- "$config{full_version}" -}"#g' include/openssl/opensslv.h.in
-    #cd ..
     cd ${nginx_version}
     sed -i 's# -g # #g' `grep " \-g " -rl auto`
     sed -i 's# -g"# "#g' `grep " \-g\"" -rl auto`
@@ -1119,6 +1117,7 @@ install_update_v2ray_ws_tls()
     make
     make install
     mkdir /etc/nginx/conf.d
+    mkdir /etc/nginx/certs
     mkdir /etc/nginx/tcmalloc_temp
     chmod 777 /etc/nginx/tcmalloc_temp
     cd ..
