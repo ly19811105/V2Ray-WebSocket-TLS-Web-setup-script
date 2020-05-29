@@ -994,6 +994,7 @@ setsshd()
 get_certs()
 {
     cp /etc/nginx/conf/nginx.conf.default /etc/nginx/conf/nginx.conf
+    sleep 1s
     /etc/nginx/sbin/nginx -s stop
     sleep 1s
     pkill nginx
@@ -1008,7 +1009,8 @@ get_certs()
             $HOME/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html -k ec-256 --ocsp
             ;;
     esac
-    $HOME/.acme.sh/acme.sh --installcert -d $1 --key-file /etc/nginx/certs/$1.key --fullchain-file /etc/nginx/certs/$1.cer --reloadcmd "/etc/nginx/sbin/nginx -s stop && echo renewing domain certs && sleep 1s && pkill nginx && /etc/nginx/sbin/nginx" --ecc
+    $HOME/.acme.sh/acme.sh --installcert -d $1 --key-file /etc/nginx/certs/$1.key --fullchain-file /etc/nginx/certs/$1.cer --reloadcmd "sleep 1s && /etc/nginx/sbin/nginx -s stop && sleep 1s && /etc/nginx/sbin/nginx && echo 'install domain certs success' || echo 'install domain certs failed'" --ecc
+    sleep 1s
     /etc/nginx/sbin/nginx -s stop
     sleep 1s
     pkill nginx
@@ -1786,6 +1788,7 @@ EOF
             sed -i s#"$path"#"$new_path"# /etc/v2ray/config.json
             sed -i s#"$path"#"$new_path"# /etc/nginx/conf.d/v2ray.conf
             service v2ray restart
+            sleep 1s
             /etc/nginx/sbin/nginx -s stop
             sleep 1s
             pkill nginx
