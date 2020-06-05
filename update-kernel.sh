@@ -134,69 +134,69 @@ failed_version()
         return 1
     fi
 }
-
-last_version()
+get_kernel_list()
 {
-    if [ "$kernel" != "${kernel_list[kernel_i]}" ]; then
-        kernel=${kernel_list[kernel_i]}
-        return 0
-    fi
-    ((kernel_i++))
-    if ! [[ "$kernel" =~ "rc" ]] && [[ "${kernel_list[kernel_i]}" =~ "rc" ]]; then
-        if check_rc2 ${kernel_list[kernel_i]}; then
-            kernel=${kernel_list[kernel_i]%%-*}
-            return 0
-        fi
-    fi
-    if [[ "$kernel" =~ "rc" ]] && [[ "${kernel_list[kernel_i]}" =~ "rc" ]]; then
-        if [ "${kernel%%-*}" != "${kernel_list[kernel_i]%%-*}" ]; then
-            if check_rc2 ${kernel_list[kernel_i]}; then
-                kernel=${kernel_list[kernel_i]%%-*}
-                return 0
-            fi
-        fi
-    fi
-    if [[ "$kernel" =~ "rc" ]] && ! [[ "${kernel_list[kernel_i]}" =~ "rc" ]]; then
-        if [ "${kernel_list[kernel_i]}" == ${kernel%%-*} ]; then
-            ((kernel_i++))
-        fi
-    fi
-    kernel=${kernel_list[kernel_i]}
-}
-
-check_rc2()
-{
-    if [[ "${1}" =~ "rc" ]] ; then
-        local temp=${1%%-*}
-        if echo ${kernel_list[@]} | grep -q " ${temp} " ; then
-            return 0
-        fi
-    fi
-    return 1
-}
-
-get_latest_version() {
-    kernel_list=($(wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/ | awk -F'\"v' '/v[0-9]/{print $2}' | cut -d '"' -f1 | cut -d '/' -f1 | sort -rV))
-    kernel_i=0
-    kernel=${kernel_list[kernel_i]}
-    if check_rc2 ${kernel}; then
-        kernel=${kernel%%-*}
-    fi
-    while failed_version $kernel ;
+    local kernel_list_temp=($(wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/ | awk -F'\"v' '/v[0-9]/{print $2}' | cut -d '"' -f1 | cut -d '/' -f1 | sort -rV))
+    local i=0
+    local i2=0
+    local i3=0
+    local kernel_rc=""
+    while ((i2<${#kernel_list_temp[@]}))
     do
-        last_version
+        if [[ "${kernel_list_temp[i2]}" =~ "rc" ]] && [ "$kernel_rc" == "" ]; then
+            kernel_list_temp2[i3]="${kernel_list_temp[i2]}"
+            kernel_rc="${kernel_list_temp[i2]%%-*}"
+            ((i3++))
+            ((i2++))
+        elif [[ "${kernel_list_temp[i2]}" =~ "rc" ]] && [ "${kernel_list_temp[i2]%%-*}" == "$kernel_rc" ]; then
+            kernel_list_temp2[i3]=${kernel_list_temp[i2]}
+            ((i3++))
+            ((i2++))
+        elif [[ "${kernel_list_temp[i2]}" =~ "rc" ]] && [ "${kernel_list_temp[i2]%%-*}" != "$kernel_rc" ]; then
+            for((i3=0;i3<${#kernel_list_temp2[@]};i3++))
+            do
+                kernel_list[i]=${kernel_list_temp2[i3]}
+                ((i++))
+            done
+            kernel_rc=""
+            i3=0
+            unset kernel_list_temp2
+        elif version_ge "$kernel_rc" "${kernel_list_temp[i2]}"; then
+            if [ "$kernel_rc" == "${kernel_list_temp[i2]}" ]; then
+                kernel_list[i]=${kernel_list_temp[i2]}
+                ((i++))
+                ((i2++))
+            fi
+            for((i3=0;i3<${#kernel_list_temp2[@]};i3++))
+            do
+                kernel_list[i]=${kernel_list_temp2[i3]}
+                ((i++))
+            done
+            kernel_rc=""
+            i3=0
+            unset kernel_list_temp2
+        else
+            kernel_list[i]=${kernel_list_temp[i2]}
+            ((i++))
+            ((i2++))
+        fi
     done
-    echo "latest_kernel_version=$kernel"
-    #[ ${#latest_version[@]} -eq 0 ] && echo -e "${red}Error:${plain} Get latest kernel version failed." && exit 1
-
-    #kernel_arr=()
-    #for i in ${latest_version[@]}; do
-    #    if version_ge $i 4.14; then
-    #        kernel_arr+=($i);
-    #    fi
-    #done
-
-    #display_menu kernel last
+    if [ "$kernel_rc" != "" ]; then
+        for((i3=0;i3<${#kernel_list_temp2[@]};i3++))
+        do
+            kernel_list[i]=${kernel_list_temp2[i3]}
+            ((i++))
+        done
+    fi
+}
+get_latest_version() {
+    get_kernel_list
+    local i=0
+    while failed_version ${kernel_list[i]} ;
+    do
+        ((i++))
+    done
+    kernel=${kernel_list[i]}
 
     if [[ `getconf WORD_BIT` == "32" && `getconf LONG_BIT` == "64" ]]; then
         deb_name=$(wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/v${kernel}/ | grep "linux-image" | grep "generic" | awk -F'\">' '/amd64.deb/{print $2}' | cut -d'<' -f1 | head -1)
@@ -221,8 +221,6 @@ get_latest_version() {
         deb_kernel_modules_url="https://kernel.ubuntu.com/~kernel-ppa/mainline/v${kernel}/${modules_deb_name}"
         deb_kernel_modules_name="linux-modules-${kernel}-i386.deb"
     fi
-
-    [ -z ${deb_name} ] && echo -e "${red}Error:${plain} Getting Linux kernel binary package name failed, maybe kernel build failed. Please choose other one and try again." && exit 1
 }
 
 get_opsy() {
@@ -272,39 +270,6 @@ centosversion() {
 check_bbr_status() {
     local param=$(sysctl net.ipv4.tcp_congestion_control | awk '{print $3}')
     if [[ x"${param}" == x"bbr" ]]; then
-        return 0
-    else
-        return 1
-    fi
-}
-check_fake_version() {
-    local temp=${1##*.}
-    if [ ${temp} -eq 0 ] ; then
-        return 0
-    else
-        return 1
-    fi
-}
-check_kernel_version() {
-    local kernel_version=$(uname -r | cut -d - -f 1)
-    while check_fake_version ${kernel_version} ;
-    do
-        kernel_version=${kernel_version%.*}
-    done
-    if [[ x"${release}" == x"ubuntu" || x"${release}" == x"debian" ]] ; then
-        rc_version=`uname -r | cut -d - -f 2`
-        if [[ $rc_version =~ "rc" ]] ; then
-            rc_version=${rc_version##*'rc'}
-            kernel_version=${kernel_version}-rc${rc_version}
-        fi
-    fi
-    echo "your_kernel_version=${kernel_version}"
-    if [[ $kernel_version =~ "rc" ]] ; then
-        if ! [[ $kernel =~ "rc" ]] ; then
-            return 1
-        fi
-    fi
-    if version_ge ${kernel_version} ${kernel}; then
         return 0
     else
         return 1
@@ -451,8 +416,9 @@ install_bbr() {
     elif [[ x"${release}" == x"ubuntu" || x"${release}" == x"debian" ]]; then
         echo -e "${green}Info:${plain} Getting latest kernel version..."
         get_latest_version
-        check_kernel_version
-        if [ $? -eq 0 ]; then
+        echo "latest_kernel_version=${deb_name%%_*}"
+        echo "your_kernel_version=$(uname -r)"
+        if dpkg --list | grep -q "${deb_name%%_*}"; then
             echo
             echo -e "${green}Info:${plain} Your kernel version is lastest"
             exit 0
