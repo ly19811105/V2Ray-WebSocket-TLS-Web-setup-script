@@ -1,6 +1,6 @@
 #!/bin/bash
 nginx_version=nginx-1.19.0
-openssl_version=openssl-openssl-3.0.0-alpha3
+openssl_version=openssl-openssl-3.0.0-alpha2
 
 #定义几个颜色
 tyblue()                           #天依蓝
@@ -658,7 +658,62 @@ remove_v2ray_nginx()
     is_installed=0
 }
 
-
+#获取最新版本内核列表
+get_kernel_list()
+{
+    local kernel_list_temp=($(wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/ | awk -F'\"v' '/v[0-9]/{print $2}' | cut -d '"' -f1 | cut -d '/' -f1 | sort -rV))
+    local i=0
+    local i2=0
+    local i3=0
+    local kernel_rc=""
+    while ((i2<${#kernel_list_temp[@]}))
+    do
+        if [[ "${kernel_list_temp[i2]}" =~ "rc" ]] && [ "$kernel_rc" == "" ]; then
+            kernel_list_temp2[i3]="${kernel_list_temp[i2]}"
+            kernel_rc="${kernel_list_temp[i2]%%-*}"
+            ((i3++))
+            ((i2++))
+        elif [[ "${kernel_list_temp[i2]}" =~ "rc" ]] && [ "${kernel_list_temp[i2]%%-*}" == "$kernel_rc" ]; then
+            kernel_list_temp2[i3]=${kernel_list_temp[i2]}
+            ((i3++))
+            ((i2++))
+        elif [[ "${kernel_list_temp[i2]}" =~ "rc" ]] && [ "${kernel_list_temp[i2]%%-*}" != "$kernel_rc" ]; then
+            for((i3=0;i3<${#kernel_list_temp2[@]};i3++))
+            do
+                kernel_list[i]=${kernel_list_temp2[i3]}
+                ((i++))
+            done
+            kernel_rc=""
+            i3=0
+            unset kernel_list_temp2
+        elif version_ge "$kernel_rc" "${kernel_list_temp[i2]}"; then
+            if [ "$kernel_rc" == "${kernel_list_temp[i2]}" ]; then
+                kernel_list[i]=${kernel_list_temp[i2]}
+                ((i++))
+                ((i2++))
+            fi
+            for((i3=0;i3<${#kernel_list_temp2[@]};i3++))
+            do
+                kernel_list[i]=${kernel_list_temp2[i3]}
+                ((i++))
+            done
+            kernel_rc=""
+            i3=0
+            unset kernel_list_temp2
+        else
+            kernel_list[i]=${kernel_list_temp[i2]}
+            ((i++))
+            ((i2++))
+        fi
+    done
+    if [ "$kernel_rc" != "" ]; then
+        for((i3=0;i3<${#kernel_list_temp2[@]};i3++))
+        do
+            kernel_list[i]=${kernel_list_temp2[i3]}
+            ((i++))
+        done
+    fi
+}
 
 #安装bbr
 install_bbr()
@@ -680,19 +735,13 @@ install_bbr()
     do
         kernel_version=${kernel_version%.*}
     done
-    local version=$(wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/ | awk -F'\"v' '/v[0-9]/{print $2}' | cut -d '"' -f1 | cut -d '/' -f1 | sort -rV)
-    local last_v=$(echo $version | cut -d ' ' -f 1)
+    get_kernel_list
+    local last_v=${kernel_list[0]}
     if [ $release == ubuntu ] || [ $release == debian ] ; then
         local rc_version=`uname -r | cut -d - -f 2`
         if [[ $rc_version =~ "rc" ]] ; then
             rc_version=${rc_version##*'rc'}
             kernel_version=${kernel_version}-rc${rc_version}
-        fi
-        if [[ $last_v =~ "rc" ]] ; then
-            local last_v2=${last_v%%-*}
-            if echo $version | grep -q " $last_v2 " ; then
-                last_v=$last_v2
-            fi
         fi
     else
         last_v=${last_v%%-*}
