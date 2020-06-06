@@ -416,9 +416,11 @@ install_bbr() {
     elif [[ x"${release}" == x"ubuntu" || x"${release}" == x"debian" ]]; then
         echo -e "${green}Info:${plain} Getting latest kernel version..."
         get_latest_version
-        echo "latest_kernel_version=${deb_name%%_*}"
+        local real_deb_name=${deb_name%%_*}
+        real_deb_name=${deb_name%%*/}
+        echo "latest_kernel_version=${real_deb_name}"
         echo "your_kernel_version=$(uname -r)"
-        if dpkg --list | grep -q "${deb_name%%_*}"; then
+        if dpkg --list | grep -q "${real_deb_name}"; then
             echo
             echo -e "${green}Info:${plain} Your kernel version is lastest"
             exit 0
@@ -470,9 +472,13 @@ remove_kernel()
         kernel_list_image=($(dpkg --list | grep 'linux-image' | awk '{print $2}'))
         kernel_list_modules=($(dpkg --list | grep 'linux-modules' | awk '{print $2}'))
         kernel_headers_all=${headers_all_deb_name%%_*}
+        kernel_headers_all=${kernel_headers_all##*/}
         kernel_headers=${headers_generic_deb_name%%_*}
+        kernel_headers=${kernel_headers##*/}
         kernel_image=${deb_name%%_*}
+        kernel_image=${kernel_image##*/}
         kernel_modules=${modules_deb_name%%_*}
+        kernel_modules=${kernel_modules##*/}
         if [ "$flag" == "1" ]; then
             ok_install=0
             for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
@@ -550,8 +556,7 @@ remove_kernel()
     fi
     echo '卸载完成'
 }
-
-clear
+echo -e "\n\n\n"
 echo "---------- System Information ----------"
 echo " OS      : $opsy"
 echo " Arch    : $arch ($lbit Bit)"
