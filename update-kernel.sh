@@ -417,7 +417,7 @@ install_bbr() {
         echo -e "${green}Info:${plain} Getting latest kernel version..."
         get_latest_version
         local real_deb_name=${deb_name%%_*}
-        real_deb_name=${deb_name##*/}
+        real_deb_name=${real_deb_name##*/}
         echo "latest_kernel_version=${real_deb_name}"
         echo "your_kernel_version=$(uname -r)"
         if dpkg --list | grep -q "${real_deb_name}"; then
