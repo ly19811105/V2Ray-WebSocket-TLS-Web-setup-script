@@ -1109,14 +1109,28 @@ install_update_v2ray_ws_tls()
     if [ "$release" == "ubuntu" ] && version_ge $systemVersion 20.04; then
         apt -y install gcc-10 g++-10
         apt -y purge gcc g++ gcc-9 g++-9 gcc-8 g++-8 gcc-7 g++-7
-        apt -y install gcc-10 g++-10
         apt -y autopurge
-        ln -s -f /usr/bin/gcc-10 /usr/bin/gcc
-        ln -s -f /usr/bin/gcc-10 /usr/bin/cc
-        ln -s -f /usr/bin/g++-10 /usr/bin/g++
-        ln -s -f /usr/bin/g++-10 /usr/bin/c++
-        ln -s -f /usr/bin/gcc-10 /usr/bin/x86_64-linux-gnu-gcc
-        ln -s -f /usr/bin/g++-10 /usr/bin/x86_64-linux-gnu-g++
+        apt -y install gcc-10 g++-10
+        ln -s -f /usr/bin/gcc-10                         /usr/bin/gcc
+        ln -s -f /usr/bin/gcc-10                         /usr/bin/cc
+        ln -s -f /usr/bin/x86_64-linux-gnu-gcc-10        /usr/bin/x86_64-linux-gnu-gcc
+        ln -s -f /usr/bin/g++-10                         /usr/bin/g++
+        ln -s -f /usr/bin/g++-10                         /usr/bin/c++
+        ln -s -f /usr/bin/x86_64-linux-gnu-g++-10        /usr/bin/x86_64-linux-gnu-g++
+        ln -s -f /usr/bin/gcc-ar-10                      /usr/bin/gcc-ar
+        ln -s -f /usr/bin/x86_64-linux-gnu-gcc-ar-10     /usr/bin/x86_64-linux-gnu-gcc-ar
+        ln -s -f /usr/bin/gcc-nm-10                      /usr/bin/gcc-nm
+        ln -s -f /usr/bin/x86_64-linux-gnu-gcc-nm-10     /usr/bin/x86_64-linux-gnu-gcc-nm
+        ln -s -f /usr/bin/gcc-ranlib-10                  /usr/bin/gcc-ranlib
+        ln -s -f /usr/bin/x86_64-linux-gnu-gcc-ranlib-10 /usr/bin/x86_64-linux-gnu-gcc-ranlib
+        ln -s -f /usr/bin/cpp-10                         /usr/bin/cpp
+        ln -s -f /usr/bin/x86_64-linux-gnu-cpp-10        /usr/bin/x86_64-linux-gnu-cpp
+        ln -s -f /usr/bin/gcov-10                        /usr/bin/gcov
+        ln -s -f /usr/bin/gcov-dump-10                   /usr/bin/gcov-dump
+        ln -s -f /usr/bin/gcov-tool-10                   /usr/bin/gcov-tool
+        ln -s -f /usr/bin/x86_64-linux-gnu-gcov-10       /usr/bin/x86_64-linux-gnu-gcov
+        ln -s -f /usr/bin/x86_64-linux-gnu-gcov-dump-10  /usr/bin/x86_64-linux-gnu-gcov-dump
+        ln -s -f /usr/bin/x86_64-linux-gnu-gcov-tool-10  /usr/bin/x86_64-linux-gnu-gcov-tool
     else
         apt -y install gcc g++
     fi
@@ -1148,18 +1162,7 @@ install_update_v2ray_ws_tls()
     fi
     tar -zxf ${openssl_version}.tar.gz
     cd ${nginx_version}
-    sed -i 's# -g # #g' `grep " \-g " -rl auto`
-    sed -i 's# -g"# "#g' `grep " \-g\"" -rl auto`
-    sed -i 's#-O #-O3 #g' `grep "\-O " -rl auto`
-    sed -i 's#-O"#-O3"#g' `grep "\-O\"" -rl auto`
-    sed -i 's#-O2#-O3#g' `grep "\-O2" -rl auto`
-    sed -i 's#-O1#-O3#g' `grep "\-O1" -rl auto`
-    sed -i 's#-Os#-O3#g' `grep "\-Os" -rl auto`
-    sed -i 's#-Og#-O3#g' `grep "\-Og" -rl auto`
-    sed -i 's#-Oz#-O3#g' `grep "\-Oz" -rl auto`
-    sed -i s#\'-O\'#\'-O3\'#g src/http/modules/perl/Makefile.PL
-    sed -i 's#-Werror# #g' `grep "\-Werror" -rl auto`
-    ./configure --prefix=/etc/nginx --with-openssl=../$openssl_version --with-openssl-opt="enable-tls1_3 enable-tls1_2 enable-tls1 enable-ssl enable-ssl2 enable-ssl3 enable-ec_nistp_64_gcc_128 shared threads zlib-dynamic sctp" --with-mail=dynamic --with-mail_ssl_module --with-stream=dynamic --with-stream_ssl_module --with-stream_realip_module --with-stream_geoip_module=dynamic --with-stream_ssl_preread_module --with-http_ssl_module --with-http_v2_module --with-http_realip_module --with-http_addition_module --with-http_xslt_module=dynamic --with-http_image_filter_module=dynamic --with-http_geoip_module=dynamic --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_slice_module --with-http_stub_status_module --with-http_perl_module=dynamic --with-pcre --with-libatomic --with-compat --with-cpp_test_module --with-google_perftools_module --with-file-aio --with-threads --with-poll_module --with-select_module --with-cc-opt=-O3
+    ./configure --prefix=/etc/nginx --with-openssl=../$openssl_version --with-openssl-opt="enable-ec_nistp_64_gcc_128 shared threads zlib-dynamic sctp" --with-mail=dynamic --with-mail_ssl_module --with-stream=dynamic --with-stream_ssl_module --with-stream_realip_module --with-stream_geoip_module=dynamic --with-stream_ssl_preread_module --with-http_ssl_module --with-http_v2_module --with-http_realip_module --with-http_addition_module --with-http_xslt_module=dynamic --with-http_image_filter_module=dynamic --with-http_geoip_module=dynamic --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_slice_module --with-http_stub_status_module --with-http_perl_module=dynamic --with-pcre --with-libatomic --with-compat --with-cpp_test_module --with-google_perftools_module --with-file-aio --with-threads --with-poll_module --with-select_module --with-cc-opt="-Wno-error -g0 -O3"
     make
     if [ $update == 1 ]; then
         mkdir ../domain_backup
