@@ -1109,14 +1109,28 @@ install_update_v2ray_ws_tls()
     if [ "$release" == "ubuntu" ] && version_ge $systemVersion 20.04; then
         apt -y install gcc-10 g++-10
         apt -y purge gcc g++ gcc-9 g++-9 gcc-8 g++-8 gcc-7 g++-7
-        apt -y install gcc-10 g++-10
         apt -y autopurge
-        ln -s -f /usr/bin/gcc-10 /usr/bin/gcc
-        ln -s -f /usr/bin/gcc-10 /usr/bin/cc
-        ln -s -f /usr/bin/g++-10 /usr/bin/g++
-        ln -s -f /usr/bin/g++-10 /usr/bin/c++
-        ln -s -f /usr/bin/gcc-10 /usr/bin/x86_64-linux-gnu-gcc
-        ln -s -f /usr/bin/g++-10 /usr/bin/x86_64-linux-gnu-g++
+        apt -y install gcc-10 g++-10
+        ln -s -f /usr/bin/gcc-10                         /usr/bin/gcc
+        ln -s -f /usr/bin/gcc-10                         /usr/bin/cc
+        ln -s -f /usr/bin/x86_64-linux-gnu-gcc-10        /usr/bin/x86_64-linux-gnu-gcc
+        ln -s -f /usr/bin/g++-10                         /usr/bin/g++
+        ln -s -f /usr/bin/g++-10                         /usr/bin/c++
+        ln -s -f /usr/bin/x86_64-linux-gnu-g++-10        /usr/bin/x86_64-linux-gnu-g++
+        ln -s -f /usr/bin/gcc-ar-10                      /usr/bin/gcc-ar
+        ln -s -f /usr/bin/x86_64-linux-gnu-gcc-ar-10     /usr/bin/x86_64-linux-gnu-gcc-ar
+        ln -s -f /usr/bin/gcc-nm-10                      /usr/bin/gcc-nm
+        ln -s -f /usr/bin/x86_64-linux-gnu-gcc-nm-10     /usr/bin/x86_64-linux-gnu-gcc-nm
+        ln -s -f /usr/bin/gcc-ranlib-10                  /usr/bin/gcc-ranlib
+        ln -s -f /usr/bin/x86_64-linux-gnu-gcc-ranlib-10 /usr/bin/x86_64-linux-gnu-gcc-ranlib
+        ln -s -f /usr/bin/cpp-10                         /usr/bin/cpp
+        ln -s -f /usr/bin/x86_64-linux-gnu-cpp-10        /usr/bin/x86_64-linux-gnu-cpp
+        ln -s -f /usr/bin/gcov-10                        /usr/bin/gcov
+        ln -s -f /usr/bin/gcov-dump-10                   /usr/bin/gcov-dump
+        ln -s -f /usr/bin/gcov-tool-10                   /usr/bin/gcov-tool
+        ln -s -f /usr/bin/x86_64-linux-gnu-gcov-10       /usr/bin/x86_64-linux-gnu-gcov
+        ln -s -f /usr/bin/x86_64-linux-gnu-gcov-dump-10  /usr/bin/x86_64-linux-gnu-gcov-dump
+        ln -s -f /usr/bin/x86_64-linux-gnu-gcov-tool-10  /usr/bin/x86_64-linux-gnu-gcov-tool
     else
         apt -y install gcc g++
     fi
