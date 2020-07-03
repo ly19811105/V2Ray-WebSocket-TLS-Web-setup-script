@@ -487,24 +487,24 @@ remove_kernel()
             for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
             do
                 if [[ "${kernel_list_headers[$i]}" == "$kernel_headers" ]] ; then     
-                    kernel_list_headers[$i]=""
+                    unset kernel_list_headers[$i]
                     ((ok_install++))
                 fi
             done
             if [ "$ok_install" != "1" ] ; then
-                echo "未发现可卸载内核！不卸载"
+                echo "内核可能安装失败！不卸载"
                 return 1
             fi
             ok_install=0
             for ((i=${#kernel_list_headers[@]}-1;i>=0;i--))
             do
                 if [[ "${kernel_list_headers[$i]}" == "$kernel_headers_all" ]] ; then     
-                    kernel_list_headers[$i]=""
+                    unset kernel_list_headers[$i]
                     ((ok_install++))
                 fi
             done
             if [ "$ok_install" != "1" ] ; then
-                echo "未发现可卸载内核！不卸载"
+                echo "内核可能安装失败！不卸载"
                 return 1
             fi
         fi
@@ -512,27 +512,30 @@ remove_kernel()
         for ((i=${#kernel_list_image[@]}-1;i>=0;i--))
         do
             if [[ "${kernel_list_image[$i]}" == "$kernel_image" ]] ; then     
-                kernel_list_image[$i]=""
+                unset kernel_list_image[$i]
                 ((ok_install++))
             fi
         done
         if [ "$ok_install" != "1" ] ; then
-            echo "未发现可卸载内核！不卸载"
+            echo "内核可能安装失败！不卸载"
             return 1
         fi
         ok_install=0
         for ((i=${#kernel_list_modules[@]}-1;i>=0;i--))
         do
             if [[ "${kernel_list_modules[$i]}" == "$kernel_modules" ]] ; then     
-                kernel_list_modules[$i]=""
+                unset kernel_list_modules[$i]
                 ((ok_install++))
             fi
         done
         if [ "$ok_install" != "1" ] ; then
+            echo "内核可能安装失败！不卸载"
+            return 1
+        fi
+        if [ ${#kernel_list_headers[@]} -eq 0 ] && [ ${#kernel_list_image[@]} -eq 0 ] && [ ${#kernel_list_modules[@]} -eq 0 ]; then
             echo "未发现可卸载内核！不卸载"
             return 1
         fi
-
         echo "卸载过程中弹出对话框，请选择NO！"
         echo "卸载过程中弹出对话框，请选择NO！"
         echo "卸载过程中弹出对话框，请选择NO！"
@@ -540,10 +543,8 @@ remove_kernel()
         read -s rubbish
         if [ "$flag" == "1" ]; then
             apt -y purge ${kernel_list_headers[@]} ${kernel_list_image[@]} ${kernel_list_modules[@]}
-            #apt -y remove ${kernel_list_headers[@]} ${kernel_list_image[@]} ${kernel_list_modules[@]}
         else
             apt -y purge ${kernel_list_image[@]} ${kernel_list_modules[@]}
-            #apt -y remove ${kernel_list_image[@]} ${kernel_list_modules[@]}
         fi
         apt -y -f install
     else
