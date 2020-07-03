@@ -423,7 +423,14 @@ install_bbr() {
         if dpkg --list | grep -q "${real_deb_name}"; then
             echo
             echo -e "${green}Info:${plain} Your kernel version is lastest"
-            exit 0
+            choice=""
+            while [ "$choice" != "y" -a "$choice" != "n" ]
+            do
+                read -p "您的内核可能已经是最新版本，仍要升级？(y/n)" choice
+            done
+            if [ "$choice" == "n" ]; then
+                exit 0
+            fi
         fi
         rm -rf kernel_
         mkdir kernel_
@@ -460,11 +467,12 @@ install_bbr() {
 
 remove_kernel()
 {
-    while [ "$auto_remove" != "y" -a "$auto_remove" != "n" ]
+    choice=""
+    while [ "$choice" != "y" -a "$choice" != "n" ]
     do
-        read -p "是否卸载多余内核？(y/n)" auto_remove
+        read -p "是否卸载多余内核？(y/n)" choice
     done
-    if [ "$auto_remove" == "n" ]; then
+    if [ "$choice" == "n" ]; then
         return 0
     fi
     if [ $release == ubuntu ] || [ $release == debian ]; then
@@ -489,7 +497,7 @@ remove_kernel()
                 fi
             done
             if [ "$ok_install" != "1" ] ; then
-                echo "内核可能安装失败！不卸载"
+                echo "未发现可卸载内核！不卸载"
                 return 1
             fi
             ok_install=0
@@ -501,7 +509,7 @@ remove_kernel()
                 fi
             done
             if [ "$ok_install" != "1" ] ; then
-                echo "内核可能安装失败！不卸载"
+                echo "未发现可卸载内核！不卸载"
                 return 1
             fi
         fi
@@ -514,7 +522,7 @@ remove_kernel()
             fi
         done
         if [ "$ok_install" != "1" ] ; then
-            echo "内核可能安装失败！不卸载"
+            echo "未发现可卸载内核！不卸载"
             return 1
         fi
         ok_install=0
@@ -526,7 +534,7 @@ remove_kernel()
             fi
         done
         if [ "$ok_install" != "1" ] ; then
-            echo "内核可能安装失败！不卸载"
+            echo "未发现可卸载内核！不卸载"
             return 1
         fi
 
@@ -549,7 +557,7 @@ remove_kernel()
         local kernel_list_core=($(rpm -qa | grep '^kernel-core\|^kernel-ml-core'))
         local kernel_list_devel=($(rpm -qa | grep '^kernel-devel\|^kernel-ml-devel'))
         if [ $((${#kernel_list[@]}-${#kernel_list_first[@]})) -le 0 ] || [ $((${#kernel_list_modules[@]}-${#kernel_list_modules_first[@]})) -le 0 ] || [ $((${#kernel_list_core[@]}-${#kernel_list_core_first[@]})) -le 0 ] || [ $((${#kernel_list_devel[@]}-${#kernel_list_devel_first[@]})) -le 0 ]; then
-            echo "内核未安装或安装失败，不卸载"
+            echo "未发现可卸载内核！不卸载"
             return 1
         fi
         rpm -e --nodeps ${kernel_list_first[@]} ${kernel_list_modules_first[@]} ${kernel_list_core_first[@]} ${kernel_list_devel_first[@]}
