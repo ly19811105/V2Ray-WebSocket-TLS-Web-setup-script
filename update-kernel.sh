@@ -416,21 +416,16 @@ install_bbr() {
     elif [[ x"${release}" == x"ubuntu" || x"${release}" == x"debian" ]]; then
         echo -e "${green}Info:${plain} Getting latest kernel version..."
         get_latest_version
-        local real_deb_name=${deb_name%%_*}
-        real_deb_name=${real_deb_name##*/}
+        local real_deb_name=${deb_name##*/}
+        real_deb_name=${real_deb_name%%_*}"("${real_deb_name#*_}
+        real_deb_name=${real_deb_name%%_*}")"
         echo "latest_kernel_version=${real_deb_name}"
-        echo "your_kernel_version=$(uname -r)"
-        if dpkg --list | grep -q "${real_deb_name}"; then
+        local temp_your_kernel_version=$(uname -r)"("$(dpkg --list | grep $(uname -r) | head -n 1 | awk '{print $3}')")"
+        echo "your_kernel_version=${temp_your_kernel_version}"
+        if [[ "$real_deb_name" =~ "${temp_your_kernel_version}" ]]; then
             echo
             echo -e "${green}Info:${plain} Your kernel version is lastest"
-            choice=""
-            while [ "$choice" != "y" -a "$choice" != "n" ]
-            do
-                read -p "您的内核可能已经是最新版本，仍要升级？(y/n)" choice
-            done
-            if [ "$choice" == "n" ]; then
-                exit 0
-            fi
+            exit 0
         fi
         rm -rf kernel_
         mkdir kernel_
