@@ -1,5 +1,5 @@
 #!/bin/bash
-nginx_version=nginx-1.19.0
+nginx_version=nginx-1.19.1
 openssl_version=openssl-openssl-3.0.0-alpha4
 
 #定义几个颜色
@@ -190,7 +190,7 @@ configtls_init()
 cat > /etc/nginx/conf/nginx.conf <<EOF
 
 user  root root;
-worker_processes  8;
+worker_processes  auto;
 
 #error_log  logs/error.log;
 #error_log  logs/error.log  notice;
@@ -1109,8 +1109,8 @@ install_update_v2ray_ws_tls()
     if [ "$release" == "ubuntu" ] && version_ge $systemVersion 20.04; then
         apt -y install gcc-10 g++-10
         apt -y purge gcc g++ gcc-9 g++-9 gcc-8 g++-8 gcc-7 g++-7
-        apt -y autopurge
         apt -y install gcc-10 g++-10
+        apt -y autopurge
         ln -s -f /usr/bin/gcc-10                         /usr/bin/gcc
         ln -s -f /usr/bin/gcc-10                         /usr/bin/cc
         ln -s -f /usr/bin/x86_64-linux-gnu-gcc-10        /usr/bin/x86_64-linux-gnu-gcc
