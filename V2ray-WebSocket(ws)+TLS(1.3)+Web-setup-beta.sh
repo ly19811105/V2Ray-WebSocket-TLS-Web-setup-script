@@ -1,6 +1,6 @@
 #!/bin/bash
 nginx_version=nginx-1.19.1
-openssl_version=openssl-openssl-3.0.0-alpha4
+openssl_version=openssl-openssl-3.0.0-alpha5
 
 #定义几个颜色
 tyblue()                           #天依蓝
