@@ -464,6 +464,16 @@ doupdate()
 {
     updateSystem()
     {
+        if ! [ -e "/usr/bin/do-release-upgrade" ]; then
+            if ! apt -y install ubuntu-release-upgrader-core; then
+                apt -y update
+                if ! apt -y install ubuntu-release-upgrader-core; then
+                    red    "脚本出错！"
+                    yellow "按回车键继续或者Ctrl+c退出"
+                    read -s
+                fi
+            fi
+        fi
         echo -e "\n\n\n"
         tyblue "------------------请选择升级系统版本--------------------"
         tyblue " 1.最新beta版(现在是20.10)(2020.05)"
@@ -635,6 +645,7 @@ uninstall_firewall()
     #pkill wrapper
     pkill CmsGoAgent
     pkill aliyun-service
+    pkill AliYunDun*
     service aegis stop
     #rm -rf /usr/bin/networkd-dispatcher
     #pkill networkd
