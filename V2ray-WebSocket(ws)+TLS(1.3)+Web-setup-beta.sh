@@ -1127,7 +1127,7 @@ install_update_v2ray_ws_tls()
         get_domainlist
         get_base_information
     fi
-    if ([ $release == centos ] || [ $release == redhat ]) && ! yum -y install gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make openssl crontabs; then
+    if ([ $release == centos ] || [ $release == redhat ]) && ! yum -y install gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed perl-Data-Dumper geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make openssl crontabs; then
         yellow "依赖安装失败"
         yellow "按回车键继续或者ctrl+c退出"
         read -s
