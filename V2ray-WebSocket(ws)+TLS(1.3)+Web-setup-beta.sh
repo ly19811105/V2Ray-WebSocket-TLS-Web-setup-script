@@ -1111,7 +1111,7 @@ install_update_v2ray_ws_tls()
         get_domainlist
         get_base_information
     fi
-    yum install -y gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make
+    yum install -y gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make openssl crontabs
     ##libxml2-devel非必须
     if [ "$release" == "ubuntu" ] && version_ge $systemVersion 20.04; then
         apt -y install gcc-10 g++-10
@@ -1141,9 +1141,9 @@ install_update_v2ray_ws_tls()
     else
         apt -y install gcc g++
     fi
-    if ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make; then
+    if ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make openssl cron; then
         apt update
-        if ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make; then
+        if ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make openssl cron; then
             yellow "依赖安装失败"
             yellow "按回车键继续或者ctrl+c退出"
             read -s
