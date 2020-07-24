@@ -314,7 +314,6 @@ EOF
 first_domain()
 {
     get_certs $1 $2
-    configtls_init
 cat > /etc/nginx/conf.d/v2ray.conf<<EOF
 server {
     listen 80 fastopen=100 reuseport default_server;
@@ -407,7 +406,6 @@ EOF
 add_domain()
 {
     get_certs $1 $2
-    configtls_init
     local old_domain=$(grep -m 1 "server_name" /etc/nginx/conf.d/v2ray.conf)
     old_domain=${old_domain%';'*}
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
@@ -535,7 +533,7 @@ doupdate()
             do-release-upgrade -d
         fi
         apt update
-        apt -y dist-upgrade
+        apt -y full-upgrade
         sed -i '/Prompt/d' /etc/update-manager/release-upgrades
         echo 'Prompt=normal' >> /etc/update-manager/release-upgrades
         case "$choice" in
@@ -608,7 +606,7 @@ doupdate()
         read -s
         yum -y update
         apt update
-        apt -y dist-upgrade
+        apt -y full-upgrade
         apt -y --purge autoremove
         apt clean
         yum -y autoremove
@@ -1043,7 +1041,15 @@ setsshd()
 #获取证书  参数：  doamin   domainconfig
 get_certs()
 {
-    cp /etc/nginx/conf/nginx.conf.default /etc/nginx/conf/nginx.conf
+    configtls_init
+    mv /etc/nginx/conf.d/v2ray.conf /etc/nginx/conf.d/v2ray.conf.bak
+cat > /etc/nginx/conf.d/v2ray.conf<<EOF
+server {
+    listen 80 fastopen=100 reuseport default_server;
+    listen [::]:80 fastopen=100 reuseport default_server;
+    root /etc/nginx/html/$1;
+}
+EOF
     sleep 1s
     /etc/nginx/sbin/nginx -s stop
     sleep 1s
@@ -1051,12 +1057,12 @@ get_certs()
     /etc/nginx/sbin/nginx
     case "$2" in
         1)
-            $HOME/.acme.sh/acme.sh --issue -d $1 -d www.$1 --webroot /etc/nginx/html -k ec-256 --ocsp
-            $HOME/.acme.sh/acme.sh --issue -d $1 -d www.$1 --webroot /etc/nginx/html -k ec-256 --ocsp
+            $HOME/.acme.sh/acme.sh --issue -d $1 -d www.$1 --webroot /etc/nginx/html/$1 -k ec-256 -ak ec-256 --ocsp
+            $HOME/.acme.sh/acme.sh --issue -d $1 -d www.$1 --webroot /etc/nginx/html/$1 -k ec-256 -ak ec-256 --ocsp
             ;;
         2)
-            $HOME/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html -k ec-256 --ocsp
-            $HOME/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html -k ec-256 --ocsp
+            $HOME/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html/$1 -k ec-256 -ak ec-256 --ocsp
+            $HOME/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html/$1 -k ec-256 -ak ec-256 --ocsp
             ;;
     esac
     $HOME/.acme.sh/acme.sh --installcert -d $1 --key-file /etc/nginx/certs/$1.key --fullchain-file /etc/nginx/certs/$1.cer --reloadcmd "sleep 1s && /etc/nginx/sbin/nginx -s stop && sleep 1s && /etc/nginx/sbin/nginx && echo 'install domain certs success' || echo 'install domain certs failed'" --ecc
@@ -1064,6 +1070,7 @@ get_certs()
     /etc/nginx/sbin/nginx -s stop
     sleep 1s
     pkill nginx
+    mv /etc/nginx/conf.d/v2ray.conf.bak /etc/nginx/conf.d/v2ray.conf
 }
 
 #安装程序主体
@@ -1073,6 +1080,22 @@ install_update_v2ray_ws_tls()
         setsshd
     fi
     apt -y -f install
+    if [ $release == ubuntu ] || [ $release == debian ]; then
+        if ! apt -y install ca-certificates; then
+            apt update
+            if ! apt -y install ca-certificates; then
+                yellow "重要组件安装失败！！"
+                yellow "按回车键继续或者ctrl+c退出"
+                read -s
+            fi
+        fi
+    else
+        if ! yum -y install ca-certificates; then
+            yellow "重要组件安装失败！！"
+            yellow "按回车键继续或者ctrl+c退出"
+            read -s
+        fi
+    fi
     /etc/nginx/sbin/nginx -s stop
     sleep 1s
     pkill nginx
@@ -1104,7 +1127,11 @@ install_update_v2ray_ws_tls()
         get_domainlist
         get_base_information
     fi
-    yum install -y gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make
+    if ([ $release == centos ] || [ $release == redhat ]) && ! yum -y install gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make openssl crontabs; then
+        yellow "依赖安装失败"
+        yellow "按回车键继续或者ctrl+c退出"
+        read -s
+    fi
     ##libxml2-devel非必须
     if [ "$release" == "ubuntu" ] && version_ge $systemVersion 20.04; then
         apt -y install gcc-10 g++-10
@@ -1134,9 +1161,9 @@ install_update_v2ray_ws_tls()
     else
         apt -y install gcc g++
     fi
-    if ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make; then
+    if ([ $release == ubuntu ] || [ $release == debian ]) && ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make openssl cron; then
         apt update
-        if ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make; then
+        if ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make openssl cron; then
             yellow "依赖安装失败"
             yellow "按回车键继续或者ctrl+c退出"
             read -s
