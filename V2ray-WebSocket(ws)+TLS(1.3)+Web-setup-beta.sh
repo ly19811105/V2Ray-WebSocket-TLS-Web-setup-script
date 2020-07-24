@@ -466,7 +466,7 @@ doupdate()
     {
         if ! command -v /usr/bin/do-release-upgrade > /dev/null 2>&1; then
             if ! apt -y install ubuntu-release-upgrader-core; then
-                apt -y update
+                apt update
                 if ! apt -y install ubuntu-release-upgrader-core; then
                     red    "脚本出错！"
                     yellow "按回车键继续或者Ctrl+c退出"
@@ -1212,7 +1212,12 @@ install_update_v2ray_ws_tls()
         done
     fi
     remove_v2ray_nginx
-    make install
+    if ! make install; then
+        red    "nginx安装失败！"
+        yellow "请尝试更换系统，建议使用Ubuntu最新版系统"
+        green  "欢迎进行Bug report(https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/issues)，感谢您的支持"
+        exit 1
+    fi
     mkdir /etc/nginx/conf.d
     mkdir /etc/nginx/certs
     mkdir /etc/nginx/tcmalloc_temp
