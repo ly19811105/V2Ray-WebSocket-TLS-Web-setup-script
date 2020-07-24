@@ -314,7 +314,6 @@ EOF
 first_domain()
 {
     get_certs $1 $2
-    configtls_init
 cat > /etc/nginx/conf.d/v2ray.conf<<EOF
 server {
     listen 80 fastopen=100 reuseport default_server;
@@ -407,7 +406,6 @@ EOF
 add_domain()
 {
     get_certs $1 $2
-    configtls_init
     local old_domain=$(grep -m 1 "server_name" /etc/nginx/conf.d/v2ray.conf)
     old_domain=${old_domain%';'*}
 cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
@@ -1043,7 +1041,21 @@ setsshd()
 #获取证书  参数：  doamin   domainconfig
 get_certs()
 {
-    cp /etc/nginx/conf/nginx.conf.default /etc/nginx/conf/nginx.conf
+    configtls_init
+cat > /etc/nginx/conf.d/v2ray.conf<<EOF
+server {
+    listen 80 fastopen=100 reuseport default_server;
+    listen [::]:80 fastopen=100 reuseport default_server;
+EOF
+    if [ $2 -eq 1 ]; then
+        echo "    server_name $1 www.$1;" >> /etc/nginx/conf.d/v2ray.conf
+    else
+        echo "    server_name $1;" >> /etc/nginx/conf.d/v2ray.conf
+    fi
+cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
+    root /etc/nginx/html/$1;
+}
+EOF
     sleep 1s
     /etc/nginx/sbin/nginx -s stop
     sleep 1s
