@@ -533,7 +533,7 @@ doupdate()
             do-release-upgrade -d
         fi
         apt update
-        apt -y dist-upgrade
+        apt -y full-upgrade
         sed -i '/Prompt/d' /etc/update-manager/release-upgrades
         echo 'Prompt=normal' >> /etc/update-manager/release-upgrades
         case "$choice" in
@@ -606,7 +606,7 @@ doupdate()
         read -s
         yum -y update
         apt update
-        apt -y dist-upgrade
+        apt -y full-upgrade
         apt -y --purge autoremove
         apt clean
         yum -y autoremove
@@ -1080,6 +1080,22 @@ install_update_v2ray_ws_tls()
         setsshd
     fi
     apt -y -f install
+    if [ $release == ubuntu ] || [ $release == debian ]; then
+        if ! apt -y install openssl ca-certificates; then
+            apt update
+            if ! apt -y install openssl ca-certificates; then
+                yellow "重要组件安装失败！！"
+                yellow "按回车键继续或者ctrl+c退出"
+                read -s
+            fi
+        fi
+    else
+        if ! yum -y install openssl ca-certificates; then
+            yellow "重要组件安装失败！！"
+            yellow "按回车键继续或者ctrl+c退出"
+            read -s
+        fi
+    fi
     /etc/nginx/sbin/nginx -s stop
     sleep 1s
     pkill nginx
@@ -1111,7 +1127,11 @@ install_update_v2ray_ws_tls()
         get_domainlist
         get_base_information
     fi
-    yum install -y gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make openssl crontabs
+    if ([ $release == centos ] || [ $release == redhat ]) && ! yum install -y gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make crontabs; then
+        yellow "依赖安装失败"
+        yellow "按回车键继续或者ctrl+c退出"
+        read -s
+    fi
     ##libxml2-devel非必须
     if [ "$release" == "ubuntu" ] && version_ge $systemVersion 20.04; then
         apt -y install gcc-10 g++-10
@@ -1141,9 +1161,9 @@ install_update_v2ray_ws_tls()
     else
         apt -y install gcc g++
     fi
-    if ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make openssl cron; then
+    if ([ $release == ubuntu ] || [ $release == debian ]) && ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make cron; then
         apt update
-        if ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make openssl cron; then
+        if ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make cron; then
             yellow "依赖安装失败"
             yellow "按回车键继续或者ctrl+c退出"
             read -s
