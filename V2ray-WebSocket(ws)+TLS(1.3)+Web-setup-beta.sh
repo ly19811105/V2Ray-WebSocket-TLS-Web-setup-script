@@ -1081,16 +1081,16 @@ install_update_v2ray_ws_tls()
     fi
     apt -y -f install
     if [ $release == ubuntu ] || [ $release == debian ]; then
-        if ! apt -y install openssl ca-certificates; then
+        if ! apt -y install ca-certificates; then
             apt update
-            if ! apt -y install openssl ca-certificates; then
+            if ! apt -y install ca-certificates; then
                 yellow "重要组件安装失败！！"
                 yellow "按回车键继续或者ctrl+c退出"
                 read -s
             fi
         fi
     else
-        if ! yum -y install openssl ca-certificates; then
+        if ! yum -y install ca-certificates; then
             yellow "重要组件安装失败！！"
             yellow "按回车键继续或者ctrl+c退出"
             read -s
@@ -1127,7 +1127,7 @@ install_update_v2ray_ws_tls()
         get_domainlist
         get_base_information
     fi
-    if ([ $release == centos ] || [ $release == redhat ]) && ! yum install -y gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make crontabs; then
+    if ([ $release == centos ] || [ $release == redhat ]) && ! yum -y install gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make openssl crontabs; then
         yellow "依赖安装失败"
         yellow "按回车键继续或者ctrl+c退出"
         read -s
@@ -1161,9 +1161,9 @@ install_update_v2ray_ws_tls()
     else
         apt -y install gcc g++
     fi
-    if ([ $release == ubuntu ] || [ $release == debian ]) && ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make cron; then
+    if ([ $release == ubuntu ] || [ $release == debian ]) && ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make openssl cron; then
         apt update
-        if ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make cron; then
+        if ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make openssl cron; then
             yellow "依赖安装失败"
             yellow "按回车键继续或者ctrl+c退出"
             read -s
