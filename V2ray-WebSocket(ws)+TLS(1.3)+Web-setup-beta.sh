@@ -51,7 +51,7 @@ elif ! command -v apt > /dev/null 2>&1 && ! command -v yum > /dev/null 2>&1; the
     exit 1
 fi
 
-if lsb_release -a 2>&1 | grep -qi "ubuntu" || cat /etc/issue | grep -qi "ubuntu" || cat /proc/version | grep -qi "ubuntu"; then
+if lsb_release -a 2>&1 | grep -qi "ubuntu" || cat /etc/lsb-release | grep -qi "ubuntu" || cat /etc/os-release | grep -qi "ubuntu" || cat /etc/issue | grep -qi "ubuntu"; then
     release="ubuntu"
 elif lsb_release -a 2>&1 | grep -qi "debian" || cat /etc/issue | grep -qi "debian" || cat /proc/version | grep -qi "debian" || command -v apt > /dev/null 2>&1 && ! command -v yum > /dev/null 2>&1; then
     release="debian"
@@ -82,8 +82,6 @@ else
     is_installed=0
 fi
 
-#系统版本
-systemVersion=`lsb_release -r --short`
 
 #版本比较函数
 version_ge()
@@ -1107,6 +1105,10 @@ install_update_v2ray_ws_tls()
             read -s
         fi
     fi
+    apt -y install lsb-release
+    yum -y install lsb-release
+    #系统版本
+    systemVersion=`lsb_release -r --short`
     /etc/nginx/sbin/nginx -s stop
     sleep 1s
     pkill nginx
