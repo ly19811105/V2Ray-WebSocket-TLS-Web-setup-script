@@ -51,7 +51,7 @@ elif ! command -v apt > /dev/null 2>&1 && ! command -v yum > /dev/null 2>&1; the
     exit 1
 fi
 
-if lsb_release -a 2>&1 | grep -qi "ubuntu" || cat /etc/issue | grep -qi "ubuntu" || cat /proc/version | grep -qi "ubuntu"; then
+if lsb_release -a 2>&1 | grep -qi "ubuntu" || cat /etc/lsb-release | grep -qi "ubuntu" || cat /etc/os-release | grep -qi "ubuntu" || cat /etc/issue | grep -qi "ubuntu"; then
     release="ubuntu"
 elif lsb_release -a 2>&1 | grep -qi "debian" || cat /etc/issue | grep -qi "debian" || cat /proc/version | grep -qi "debian" || command -v apt > /dev/null 2>&1 && ! command -v yum > /dev/null 2>&1; then
     release="debian"
@@ -82,8 +82,6 @@ else
     is_installed=0
 fi
 
-#系统版本
-systemVersion=`lsb_release -r --short`
 
 #版本比较函数
 version_ge()
@@ -464,6 +462,16 @@ doupdate()
 {
     updateSystem()
     {
+        if ! command -v /usr/bin/do-release-upgrade > /dev/null 2>&1; then
+            if ! apt -y install ubuntu-release-upgrader-core; then
+                apt update
+                if ! apt -y install ubuntu-release-upgrader-core; then
+                    red    "脚本出错！"
+                    yellow "按回车键继续或者Ctrl+c退出"
+                    read -s
+                fi
+            fi
+        fi
         echo -e "\n\n\n"
         tyblue "------------------请选择升级系统版本--------------------"
         tyblue " 1.最新beta版(现在是20.10)(2020.05)"
@@ -635,6 +643,7 @@ uninstall_firewall()
     #pkill wrapper
     pkill CmsGoAgent
     pkill aliyun-service
+    pkill AliYunDun*
     service aegis stop
     #rm -rf /usr/bin/networkd-dispatcher
     #pkill networkd
@@ -1096,6 +1105,10 @@ install_update_v2ray_ws_tls()
             read -s
         fi
     fi
+    apt -y install lsb-release
+    yum -y install lsb-release
+    #系统版本
+    systemVersion=`lsb_release -r --short`
     /etc/nginx/sbin/nginx -s stop
     sleep 1s
     pkill nginx
@@ -1201,7 +1214,12 @@ install_update_v2ray_ws_tls()
         done
     fi
     remove_v2ray_nginx
-    make install
+    if ! make install; then
+        red    "nginx安装失败！"
+        yellow "请尝试更换系统，建议使用Ubuntu最新版系统"
+        green  "欢迎进行Bug report(https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/issues)，感谢您的支持"
+        exit 1
+    fi
     mkdir /etc/nginx/conf.d
     mkdir /etc/nginx/certs
     mkdir /etc/nginx/tcmalloc_temp
