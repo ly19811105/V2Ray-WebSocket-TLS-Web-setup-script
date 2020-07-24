@@ -1042,17 +1042,11 @@ setsshd()
 get_certs()
 {
     configtls_init
+    mv /etc/nginx/conf.d/v2ray.conf /etc/nginx/conf.d/v2ray.conf.bak
 cat > /etc/nginx/conf.d/v2ray.conf<<EOF
 server {
     listen 80 fastopen=100 reuseport default_server;
     listen [::]:80 fastopen=100 reuseport default_server;
-EOF
-    if [ $2 -eq 1 ]; then
-        echo "    server_name $1 www.$1;" >> /etc/nginx/conf.d/v2ray.conf
-    else
-        echo "    server_name $1;" >> /etc/nginx/conf.d/v2ray.conf
-    fi
-cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
     root /etc/nginx/html/$1;
 }
 EOF
@@ -1063,12 +1057,12 @@ EOF
     /etc/nginx/sbin/nginx
     case "$2" in
         1)
-            $HOME/.acme.sh/acme.sh --issue -d $1 -d www.$1 --webroot /etc/nginx/html -k ec-256 --ocsp
-            $HOME/.acme.sh/acme.sh --issue -d $1 -d www.$1 --webroot /etc/nginx/html -k ec-256 --ocsp
+            $HOME/.acme.sh/acme.sh --issue -d $1 -d www.$1 --webroot /etc/nginx/html/$1 -k ec-256 --ocsp
+            $HOME/.acme.sh/acme.sh --issue -d $1 -d www.$1 --webroot /etc/nginx/html/$1 -k ec-256 --ocsp
             ;;
         2)
-            $HOME/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html -k ec-256 --ocsp
-            $HOME/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html -k ec-256 --ocsp
+            $HOME/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html/$1 -k ec-256 --ocsp
+            $HOME/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html/$1 -k ec-256 --ocsp
             ;;
     esac
     $HOME/.acme.sh/acme.sh --installcert -d $1 --key-file /etc/nginx/certs/$1.key --fullchain-file /etc/nginx/certs/$1.cer --reloadcmd "sleep 1s && /etc/nginx/sbin/nginx -s stop && sleep 1s && /etc/nginx/sbin/nginx && echo 'install domain certs success' || echo 'install domain certs failed'" --ecc
@@ -1076,6 +1070,7 @@ EOF
     /etc/nginx/sbin/nginx -s stop
     sleep 1s
     pkill nginx
+    mv /etc/nginx/conf.d/v2ray.conf.bak /etc/nginx/conf.d/v2ray.conf
 }
 
 #安装程序主体
