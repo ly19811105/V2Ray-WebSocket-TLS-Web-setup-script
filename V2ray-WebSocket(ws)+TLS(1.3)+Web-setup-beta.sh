@@ -464,7 +464,7 @@ doupdate()
 {
     updateSystem()
     {
-        if ! [ -e "/usr/bin/do-release-upgrade" ]; then
+        if ! command -v /usr/bin/do-release-upgrade > /dev/null 2>&1; then
             if ! apt -y install ubuntu-release-upgrader-core; then
                 apt -y update
                 if ! apt -y install ubuntu-release-upgrader-core; then
