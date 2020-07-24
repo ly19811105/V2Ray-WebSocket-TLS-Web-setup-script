@@ -40,7 +40,7 @@ yum install wget
 ### 2. 获取脚本
 
 ```bash
-wget "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
+wget --no-check-certificate "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
 ```
 
 ### 3. 增加脚本可执行权限
@@ -61,7 +61,7 @@ chmod +x "V2ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
 
 1.有些服务器443端口被阻断，比如阿里云就有，这个脚本搭建的无法运行。
 
-2.在不同的ssh连接工具上文字的颜色显示不一样，有的看起来非常丑，还请谅解，本人使用的是xshell
+2.在不同的ssh连接工具上文字的颜色显示不一样，有的看起来非常奇怪，还请谅解（本人使用的是xshell）
 
 ## 注
 
