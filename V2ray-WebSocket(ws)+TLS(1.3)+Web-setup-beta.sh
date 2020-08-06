@@ -1,6 +1,6 @@
 #!/bin/bash
 nginx_version=nginx-1.19.1
-openssl_version=openssl-openssl-3.0.0-alpha5
+openssl_version=openssl-openssl-3.0.0-alpha6
 
 #定义几个颜色
 tyblue()                           #天依蓝
@@ -474,9 +474,9 @@ doupdate()
         fi
         echo -e "\n\n\n"
         tyblue "------------------请选择升级系统版本--------------------"
-        tyblue " 1.最新beta版(现在是20.10)(2020.05)"
-        tyblue " 2.最新发行版(现在是20.04)(2020.05)"
-        tyblue " 3.最新LTS版(现在是20.04)(2020.05)"
+        tyblue " 1.最新beta版(现在是20.10)(2020.08)"
+        tyblue " 2.最新发行版(现在是20.04)(2020.08)"
+        tyblue " 3.最新LTS版(现在是20.04)(2020.08)"
         tyblue "-------------------------版本说明-------------------------"
         tyblue " beta版：即测试版"
         tyblue " 发行版：即稳定版"
@@ -627,27 +627,26 @@ doupdate()
 }
 
 
-#删除防火墙
+#删除防火墙和阿里云盾
 uninstall_firewall()
 {
     ufw disable
-    #apt purge iptables -y
-    apt -y purge firewalld ufw
-    #chkconfig iptables off
+    apt -y purge firewalld
+    apt -y purge ufw
+    apt -y purge aliyun*
     systemctl disable firewalld
     yum -y remove firewalld
+    rm -rf $(find / -name *aliyun*)
+    rm -rf $(find / -name *CmsGoAgent*)
     rm -rf /usr/local/aegis
     rm -rf /usr/local/cloudmonitor
-    rm -rf /usr/sbin/aliyun-service
-    #pkill wrapper.syslog.id
-    #pkill wrapper
     pkill CmsGoAgent
     pkill aliyun-service
     pkill AliYunDun*
     service aegis stop
-    #rm -rf /usr/bin/networkd-dispatcher
-    #pkill networkd
     rm -rf /etc/init.d/aegis
+    rm -rf $(find / -name *aliyun*)
+    rm -rf $(find / -name *CmsGoAgent*)
 }
 
 
@@ -1306,7 +1305,7 @@ install_update_v2ray_ws_tls()
         tyblue " 将v.qq.com修改为你要镜像的网站"
     fi
     echo
-    tyblue " 脚本最后更新时间：2020.05.12"
+    tyblue " 脚本最后更新时间：2020.08.03"
     echo
     red    " 此脚本仅供交流学习使用，请勿使用此脚本行违法之事。网络非法外之地，行非法之事，必将接受法律制裁!!!!"
     tyblue " 2019.11"
@@ -1748,6 +1747,7 @@ start_menu()
                 ((temp++))
             done
             /etc/nginx/sbin/nginx
+            green "-------删除域名完成-------"
             ;;
         11)
             if [ $is_installed == 0 ] ; then
