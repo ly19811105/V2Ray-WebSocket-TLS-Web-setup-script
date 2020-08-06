@@ -1194,7 +1194,7 @@ install_update_v2ray_ws_tls()
         read -s
     fi
     tar -zxf ${nginx_version}.tar.gz
-    if ! wget -O ${openssl_version}.tar.gz https://github.com/openssl/openssl/archive/${openssl_version#*-}.tar.gz ; then
+    if ! wget -O ${openssl_version}.tar.gz https://www.openssl.org/source/openssl-3.0.0-alpha6.tar.gz; then
         red    "获取openssl失败"
         yellow "按回车键继续或者按ctrl+c终止"
         read -s
