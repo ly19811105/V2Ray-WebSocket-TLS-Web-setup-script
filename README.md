@@ -28,13 +28,13 @@
 Debian基系统(包括Ubuntu、Debian)：
 
 ```bash
-apt -y install wget || (apt update && apt -y install wget)
+! command -v wget > /dev/null 2>&1 && ! apt -y install wget && apt update && apt -y install wget
 ```
 
 Red Hat基系统(包括CentOS)：
 
 ```bash
-yum -y install wget
+! command -v wget > /dev/null 2>&1 && yum -y install wget
 ```
 
 ### 2. 获取脚本
