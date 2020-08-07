@@ -1,6 +1,6 @@
 #!/bin/bash
 nginx_version=nginx-1.19.1
-openssl_version=openssl-openssl-3.0.0-alpha4
+openssl_version=openssl-openssl-3.0.0-alpha6
 
 #定义几个颜色
 tyblue()                           #天依蓝
@@ -474,9 +474,9 @@ doupdate()
         fi
         echo -e "\n\n\n"
         tyblue "------------------请选择升级系统版本--------------------"
-        tyblue " 1.最新beta版(现在是20.10)(2020.05)"
-        tyblue " 2.最新发行版(现在是20.04)(2020.05)"
-        tyblue " 3.最新LTS版(现在是20.04)(2020.05)"
+        tyblue " 1.最新beta版(现在是20.10)(2020.08)"
+        tyblue " 2.最新发行版(现在是20.04)(2020.08)"
+        tyblue " 3.最新LTS版(现在是20.04)(2020.08)"
         tyblue "-------------------------版本说明-------------------------"
         tyblue " beta版：即测试版"
         tyblue " 发行版：即稳定版"
@@ -627,27 +627,26 @@ doupdate()
 }
 
 
-#删除防火墙
+#删除防火墙和阿里云盾
 uninstall_firewall()
 {
     ufw disable
-    #apt purge iptables -y
-    apt -y purge firewalld ufw
-    #chkconfig iptables off
+    apt -y purge firewalld
+    apt -y purge ufw
+    apt -y purge aliyun*
     systemctl disable firewalld
     yum -y remove firewalld
+    rm -rf $(find / -name *aliyun*)
+    rm -rf $(find / -name *CmsGoAgent*)
     rm -rf /usr/local/aegis
     rm -rf /usr/local/cloudmonitor
-    rm -rf /usr/sbin/aliyun-service
-    #pkill wrapper.syslog.id
-    #pkill wrapper
     pkill CmsGoAgent
     pkill aliyun-service
     pkill AliYunDun*
     service aegis stop
-    #rm -rf /usr/bin/networkd-dispatcher
-    #pkill networkd
     rm -rf /etc/init.d/aegis
+    rm -rf $(find / -name *aliyun*)
+    rm -rf $(find / -name *CmsGoAgent*)
 }
 
 
@@ -1203,7 +1202,12 @@ install_update_v2ray_ws_tls()
     tar -zxf ${openssl_version}.tar.gz
     cd ${nginx_version}
     ./configure --prefix=/etc/nginx --with-openssl=../$openssl_version --with-openssl-opt="enable-ec_nistp_64_gcc_128 shared threads zlib-dynamic sctp" --with-mail=dynamic --with-mail_ssl_module --with-stream=dynamic --with-stream_ssl_module --with-stream_realip_module --with-stream_geoip_module=dynamic --with-stream_ssl_preread_module --with-http_ssl_module --with-http_v2_module --with-http_realip_module --with-http_addition_module --with-http_xslt_module=dynamic --with-http_image_filter_module=dynamic --with-http_geoip_module=dynamic --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_slice_module --with-http_stub_status_module --with-http_perl_module=dynamic --with-pcre --with-libatomic --with-compat --with-cpp_test_module --with-google_perftools_module --with-file-aio --with-threads --with-poll_module --with-select_module --with-cc-opt="-Wno-error -g0 -O3"
-    make
+    if ! make; then
+        red    "nginx安装失败！"
+        yellow "请尝试更换系统，建议使用Ubuntu最新版系统"
+        green  "欢迎进行Bug report(https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/issues)，感谢您的支持"
+        exit 1
+    fi
     if [ $update == 1 ]; then
         mkdir ../domain_backup
         for i in ${!domain_list[@]}
@@ -1306,7 +1310,7 @@ install_update_v2ray_ws_tls()
         tyblue " 将v.qq.com修改为你要镜像的网站"
     fi
     echo
-    tyblue " 脚本最后更新时间：2020.05.12"
+    tyblue " 脚本最后更新时间：2020.08.03"
     echo
     red    " 此脚本仅供交流学习使用，请勿使用此脚本行违法之事。网络非法外之地，行非法之事，必将接受法律制裁!!!!"
     tyblue " 2019.11"
@@ -1748,6 +1752,7 @@ start_menu()
                 ((temp++))
             done
             /etc/nginx/sbin/nginx
+            green "-------删除域名完成-------"
             ;;
         11)
             if [ $is_installed == 0 ] ; then
