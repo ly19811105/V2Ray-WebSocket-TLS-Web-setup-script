@@ -1,5 +1,5 @@
 #!/bin/bash
-nginx_version=nginx-1.19.1
+nginx_version=nginx-1.19.2
 openssl_version=openssl-openssl-3.0.0-alpha6
 
 #定义几个颜色
@@ -181,6 +181,21 @@ readTlsConfig()
     done
 }
 
+#读取v2ray_protocol配置
+readProtocolConfig
+{
+    tyblue "---------------------请选择V2Ray要使用协议---------------------"
+    tyblue " 1. VLESS"
+    tyblue " 2. VMess"
+    tyblue " 3. socks(5)"
+    green "不使用cdn推荐VLESS，cdn推荐使用VMess"
+    echo
+    protocol=""
+    while [[ "$protocol" != "1" && "$protocol" != "2" && "$protocol" != "3" && "$protocol" != "4" ]]
+    do
+        read -p "您的选择是：" protocol
+    done
+}
 
 #配置nginx
 configtls_init()
@@ -1135,6 +1150,7 @@ install_update_v2ray_ws_tls()
     if [ $update == 0 ]; then
         readDomain
         readTlsConfig
+        readProtocolConfig
     else
         get_domainlist
         get_base_information
@@ -1203,7 +1219,7 @@ install_update_v2ray_ws_tls()
     cd ${nginx_version}
     ./configure --prefix=/etc/nginx --with-openssl=../$openssl_version --with-openssl-opt="enable-ec_nistp_64_gcc_128 shared threads zlib-dynamic sctp" --with-mail=dynamic --with-mail_ssl_module --with-stream=dynamic --with-stream_ssl_module --with-stream_realip_module --with-stream_geoip_module=dynamic --with-stream_ssl_preread_module --with-http_ssl_module --with-http_v2_module --with-http_realip_module --with-http_addition_module --with-http_xslt_module=dynamic --with-http_image_filter_module=dynamic --with-http_geoip_module=dynamic --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_slice_module --with-http_stub_status_module --with-http_perl_module=dynamic --with-pcre --with-libatomic --with-compat --with-cpp_test_module --with-google_perftools_module --with-file-aio --with-threads --with-poll_module --with-select_module --with-cc-opt="-Wno-error -g0 -O3"
     if ! make; then
-        red    "nginx安装失败！"
+        red    "nginx编译失败！"
         yellow "请尝试更换系统，建议使用Ubuntu最新版系统"
         green  "欢迎进行Bug report(https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/issues)，感谢您的支持"
         exit 1
@@ -1246,13 +1262,15 @@ install_update_v2ray_ws_tls()
     fi
     service v2ray stop
     if [ $update == 0 ]; then
+        local temp_protocol=$protocol
+        local temp_tlsversion=$tlsVersion
         get_base_information
+        path=$(cat /dev/urandom | head -c 8 | md5sum | head -c 7)
+        path="/$path"
+        protocol=$temp_protocol
+        tlsVersion=$temp_tlsversion
     fi
-    if [ "$v2id" == "" ]; then
-        config_v2ray_socks
-    else
-        config_v2ray_vmess
-    fi
+    config_v2ray
 
     if [ $update == 0 ]; then
         first_domain $domain $domainconfig $pretend
@@ -1282,25 +1300,31 @@ install_update_v2ray_ws_tls()
     rm -rf /temp_install_update_v2ray_ws_tls
     if [ $update == 1 ]; then
         green "-------------------升级完成-------------------"
-        exit 0
+        return
     fi
     echo -e "\n\n\n"
     tyblue "-------------------安装完成-------------------"
-    if [ $domainconfig -eq 1  ]; then
-        tyblue " 地址：www.${domain}或${domain}"
+    if [ $protocol -ne 3 ]; then
+        if [ $domainconfig -eq 1  ]; then
+            tyblue " 地址：www.${domain}或${domain}"
+        else
+            tyblue " 地址：${domain}"
+        fi
+        tyblue " 端口：443"
+        tyblue " 用户ID：${v2id}"
+        if [ $protocol -eq 2 ]; then
+            tyblue " 额外ID：0"
+            tyblue " 加密方式：一般情况推荐none;若使用了cdn，推荐auto"
+        fi
+        tyblue " 传输协议：ws"
+        tyblue " 伪装类型：none"
+        tyblue " 伪装域名：空"
+        tyblue " 路径：${path}"
+        tyblue " 底层传输安全：tls"
+        tyblue "----------------------------------------------"
     else
-        tyblue " 地址：${domain}"
+        echo_end_socks
     fi
-    tyblue " 端口：443"
-    tyblue " 用户ID：${v2id}"
-    tyblue " 额外ID：0"
-    tyblue " 加密方式：一般情况推荐none;若使用了cdn，推荐auto"
-    tyblue " 传输协议：ws"
-    tyblue " 伪装类型：none"
-    tyblue " 伪装域名：空"
-    tyblue " 路径：${path}"
-    tyblue " 底层传输安全：tls"
-    tyblue "----------------------------------------------"
     yellow " 注意事项：如重新启动服务器，请执行/etc/nginx/sbin/nginx"
     yellow "           或运行脚本，选择重启服务选项"
     echo
@@ -1316,15 +1340,31 @@ install_update_v2ray_ws_tls()
     tyblue " 2019.11"
 }
 
-#配置v2ray_vmess
-config_v2ray_vmess()
+#配置v2ray
+config_v2ray()
 {
-cat > /etc/v2ray/config.json <<EOF
+    cat > /etc/v2ray/config.json <<EOF
 {
   "inbounds": [
     {
       "port": $port,
       "listen": "127.0.0.1",
+EOF
+if [ $protocol -eq 1 ]; then
+    cat >> /etc/v2ray/config.json <<EOF
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "$v2id",
+            "level": 1
+        }
+        ],
+        "decryption": "none"
+    },
+EOF
+elif [ $protocol -eq 2]; then
+    cat >> /etc/v2ray/config.json <<EOF
       "protocol": "vmess",
       "settings": {
         "clients": [
@@ -1335,39 +1375,18 @@ cat > /etc/v2ray/config.json <<EOF
           }
         ]
       },
-      "streamSettings": {
-        "network": "ws",
-        "wsSettings": {
-          "path": "$path"
-        }
-      }
-    }
-  ],
-  "outbounds": [
-    {
-      "protocol": "freedom",
-      "settings": {}
-    }
-  ]
-}
 EOF
-}
-
-#配置v2ray_socks
-config_v2ray_socks()
-{
-cat > /etc/v2ray/config.json <<EOF
-{
-  "inbounds": [
-    {
-      "port": $port,
-      "listen": "127.0.0.1",
+    elif [ $protocol -eq 3]; then
+cat >> /etc/v2ray/config.json <<EOF
       "protocol": "socks",
       "settings": {
         "auth": "noauth",
         "udp": false,
         "userLevel": 10
       },
+EOF
+    fi
+cat >> /etc/v2ray/config.json <<EOF
       "streamSettings": {
         "network": "ws",
         "wsSettings": {
@@ -1386,49 +1405,17 @@ cat > /etc/v2ray/config.json <<EOF
 EOF
 }
 
-#修改dns
-change_dns()
-{
-    red    "注意！！"
-    red    "1.部分云服务商(如阿里云)使用本地服务器作为软件包源，修改dns后需要换源！！"
-    red    "  如果听不懂，那么请在安装完v2ray+ws+tls后再修改dns，并且修改完后不要重新安装"
-    red    "2.Ubuntu系统重启后可能会恢复原dns"
-    tyblue "此操作将修改dns服务器为1.1.1.1和1.0.0.1(cloudflare公共dns)"
-    choice=""
-    while [ "$choice" != "y" -a "$choice" != "n" ]
-    do
-        tyblue "是否要继续?(y/n)"
-        read choice
-    done
-    if [ $choice == y ]; then
-        if ! grep -q "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" /etc/resolv.conf ; then
-            sed -i 's/nameserver /#&/' /etc/resolv.conf
-            echo ' ' >> /etc/resolv.conf
-            echo 'nameserver 1.1.1.1' >> /etc/resolv.conf
-            echo 'nameserver 1.0.0.1' >> /etc/resolv.conf
-            echo '#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script' >> /etc/resolv.conf
-        fi
-        green "修改完成！！"
-    fi
-}
-
-
-#获取信息
+#获取配置信息 path port v2id protocol tlsVersion
 get_base_information()
 {
-    if [ "$is_installed" == "1" ]; then
-        path=`grep path /etc/v2ray/config.json`
-        path=${path##*' '}
-        path=${path#*'"'}
-        path=${path%'"'*}
-        if grep -m 1 "ssl_protocols" /etc/nginx/conf.d/v2ray.conf | grep -q "TLSv1.2" ; then
-            tlsVersion=1
-        else
-            tlsVersion=2
-        fi
+    path=`grep path /etc/v2ray/config.json`
+    path=${path##*' '}
+    path=${path#*'"'}
+    path=${path%'"'*}
+    if grep -m 1 "ssl_protocols" /etc/nginx/conf.d/v2ray.conf | grep -q "TLSv1.2" ; then
+        tlsVersion=1
     else
-        path=$(cat /dev/urandom | head -c 8 | md5sum | head -c 6)
-        path="/$path"
+        tlsVersion=2
     fi
     port=`grep port /etc/v2ray/config.json`
     port=${port##*' '}
@@ -1438,9 +1425,37 @@ get_base_information()
         v2id=${v2id##*' '}
         v2id=${v2id#*'"'}
         v2id=${v2id%'"'*}
+        if grep -q "vless" /etc/v2ray/config.json; then
+            protocol=1
+        else
+            protocol=2
+        fi
     else
         v2id=""
+        protocol=3
     fi
+}
+
+get_domainlist()
+{
+    domain_list=($(grep server_name /etc/nginx/conf.d/v2ray.conf | sed 's/;//g' | awk '{prit $2}'))
+    unset domain_list[0]
+    local line
+    for i in ${!domain_list[@]}
+    do
+        line=`grep -n "server_name ${domain_list[i]} www.${domain_list[i]};" /etc/nginx/conf.d/v2ray.conf | tail -n 1 | awk -F : '{print $1}'`
+        if [ "$line" == "" ]; then
+            line=`grep -n "server_name ${domain_list[i]};" /etc/nginx/conf.d/v2ray.conf | tail -n 1 | awk -F : '{print $1}'`
+            domainconfig_list[i]=2
+        else
+            domainconfig_list[i]=1
+        fi
+        if awk 'NR=='"$(($line+18))"' {print $0}' /etc/nginx/conf.d/v2ray.conf | grep -q "location / {"; then
+            pretend_list[i]=2
+        else
+            pretend_list[i]=1
+        fi
+    done
 }
 
 #下载nextcloud模板，用于伪装  参数： domain  pretend
@@ -1459,26 +1474,85 @@ get_web()
     fi
 }
 
-get_domainlist()
+#更换协议
+change_protocol()
 {
-    domain_list=($(grep server_name /etc/nginx/conf.d/v2ray.conf | sed 's/;//g' | awk '{print $2}'))
-    unset domain_list[0]
-    local line
-    for i in ${!domain_list[@]}
-    do
-        line=`grep -n "server_name ${domain_list[i]} www.${domain_list[i]};" /etc/nginx/conf.d/v2ray.conf | tail -n 1 | awk -F : '{print $1}'`
-        if [ "$line" == "" ]; then
-            line=`grep -n "server_name ${domain_list[i]};" /etc/nginx/conf.d/v2ray.conf | tail -n 1 | awk -F : '{print $1}'`
-            domainconfig_list[i]=2
-        else
-            domainconfig_list[i]=1
-        fi
-        if awk 'NR=='"$(($line+18))"' {print $0}' /etc/nginx/conf.d/v2ray.conf | grep -q "location / {"; then
-            pretend_list[i]=2
-        else
-            pretend_list[i]=1
-        fi
-    done
+    get_base_imformation
+    old_protocol=$protocol
+    readProtocolConfig
+    if [ $old_protocol -eq $protocol ]; then
+        red "协议未更换"
+        return
+    fi
+    config_v2ray
+    service v2ray restart
+    green "更换完成！！"
+    if [ $old_protocol -eq 3 ]; then
+        green "用户ID：$v2id"
+    fi
+    if [ $protocol -eq 3 ]; then
+        echo_end_socks
+    fi
+}
+
+echo_end_socks()
+{
+    tyblue "将下面一段文字复制下来，保存到文本文件中"
+    tyblue "将“你的域名”四个字修改为你的其中一个域名(保留引号)，即原配置中“地址”一栏怎么填，这里就怎么填"
+    tyblue "并将文本文件重命名为config.json"
+    tyblue "然后在V2RayN/V2RayNG中，选择导入自定义配置，选择config.json"
+    yellow "---------------以下是文本---------------"
+cat <<EOF
+{
+  "log": {
+    "access": "",
+    "error": "",
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "listen": "127.0.0.1",
+      "port": 10808,
+      "protocol": "socks",
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls"]
+      },
+      "settings": {
+        "auth": "noauth",
+        "userLevel": 10,
+        "udp": true
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "socks",
+      "settings": {
+        "servers": [
+          {
+            "address": "你的域名",
+            "level": 10,
+            "port": 443
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "$path"
+        }
+      },
+      "mux": {
+        "enabled": true,
+        "concurrency": 8
+      }
+    }
+  ]
+}
+EOF
+    tyblue "----------------------------------------"
 }
 
 #开始菜单
@@ -1759,93 +1833,7 @@ start_menu()
                 red "请先安装V2Ray-WebSocket+TLS+Web！！"
                 exit 1
             fi
-            get_base_information
-            choice=""
-            if grep -q "id" /etc/v2ray/config.json ; then
-                tyblue "----------------------修改底层协议为socks(5)----------------------"
-                tyblue " socks协议可以很大降低cpu占用率，略微同时降低延迟"
-                tyblue " 但是在网络环境较差的条件下，vmess协议的传输速率和稳定性更强"
-                tyblue " 更多信息见：https://github.com/v2ray/discussion/issues/513"
-                echo
-                while [ "$choice" != "y" -a "$choice" != "n" ]
-                do
-                    tyblue "是否要继续?(y/n)"
-                    read choice
-                done
-                if [ $choice == y ]; then
-                    config_v2ray_socks
-                    service v2ray restart
-                    green  "配置完成！！！"
-                    tyblue "将下面一段文字复制下来，保存到文本文件中"
-                    tyblue "将“你的域名”四个字修改为你的其中一个域名(保留引号)，即原配置中“地址”一栏怎么填，这里就怎么填"
-                    tyblue "并将文本文件重命名为config.json"
-                    tyblue "然后在V2RayN/V2RayNG中，选择导入自定义配置，选择config.json"
-                    yellow "---------------以下是文本---------------"
-cat <<EOF
-{
-  "log": {
-    "access": "",
-    "error": "",
-    "loglevel": "warning"
-  },
-  "inbounds": [
-    {
-      "listen": "127.0.0.1",
-      "port": 10808,
-      "protocol": "socks",
-      "sniffing": {
-        "enabled": true,
-        "destOverride": ["http", "tls"]
-      },
-      "settings": {
-        "auth": "noauth",
-        "userLevel": 10,
-        "udp": true
-      }
-    }
-  ],
-  "outbounds": [
-    {
-      "protocol": "socks",
-      "settings": {
-        "servers": [
-          {
-            "address": "你的域名",
-            "level": 10,
-            "port": 443
-          }
-        ]
-      },
-      "streamSettings": {
-        "network": "ws",
-        "security": "tls",
-        "wsSettings": {
-          "path": "$path"
-        }
-      },
-      "mux": {
-        "enabled": true,
-        "concurrency": 8
-      }
-    }
-  ]
-}
-EOF
-                fi
-            else
-                while [ "$choice" != "y" -a "$choice" != "n" ]
-                do
-                    tyblue "返回vmess作为底层协议?(y/n)"
-                    read choice
-                done
-                if [ $choice == y ]; then
-                    v2id=`cat /proc/sys/kernel/random/uuid`
-                    config_v2ray_vmess
-                    service v2ray restart
-                    green "配置完成！！！"
-                    green "用户ID：$v2id"
-                fi
-            fi
+            change_protocol
             ;;
         12)
             if [ $is_installed == 0 ] ; then
@@ -1853,7 +1841,7 @@ EOF
                 exit 1
             fi
             get_base_information
-            if [ "$v2id" == "" ] ; then
+            if [ $protocol -eq 3 ] ; then
                 red "socks模式没有ID！！"
                 exit 1
             fi
@@ -1921,6 +1909,32 @@ EOF
             change_dns
             ;;
     esac
+}
+
+#修改dns
+change_dns()
+{
+    red    "注意！！"
+    red    "1.部分云服务商(如阿里云)使用本地服务器作为软件包源，修改dns后需要换源！！"
+    red    "  如果听不懂，那么请在安装完v2ray+ws+tls后再修改dns，并且修改完后不要重新安装"
+    red    "2.Ubuntu系统重启后可能会恢复原dns"
+    tyblue "此操作将修改dns服务器为1.1.1.1和1.0.0.1(cloudflare公共dns)"
+    choice=""
+    while [ "$choice" != "y" -a "$choice" != "n" ]
+    do
+        tyblue "是否要继续?(y/n)"
+        read choice
+    done
+    if [ $choice == y ]; then
+        if ! grep -q "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" /etc/resolv.conf ; then
+            sed -i 's/nameserver /#&/' /etc/resolv.conf
+            echo ' ' >> /etc/resolv.conf
+            echo 'nameserver 1.1.1.1' >> /etc/resolv.conf
+            echo 'nameserver 1.0.0.1' >> /etc/resolv.conf
+            echo '#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script' >> /etc/resolv.conf
+        fi
+        green "修改完成！！"
+    fi
 }
 
 if ! [ "$1" == "--update" ]; then
