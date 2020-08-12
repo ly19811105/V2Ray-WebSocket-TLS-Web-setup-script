@@ -1856,7 +1856,7 @@ start_menu()
             fi
             tyblue "-------------请输入新的ID-------------"
             read v2id
-            config_v2ray_vmess
+            config_v2ray
             service v2ray restart
             green "更换成功！！"
             green "新ID：$v2id"
@@ -1875,12 +1875,11 @@ start_menu()
                 read choice
             done
             if [ $choice == "n" ]; then
-                exit 0;
+                exit 0
             fi
             tyblue "---------------请输入新的path(带\"/\")---------------"
-            read new_path
-            sed -i s#"$path"#"$new_path"# /etc/v2ray/config.json
-            sed -i s#"$path"#"$new_path"# /etc/nginx/conf.d/v2ray.conf
+            read path
+            config_v2ray
             service v2ray restart
             sleep 1s
             /etc/nginx/sbin/nginx -s stop
@@ -1888,7 +1887,7 @@ start_menu()
             pkill nginx
             /etc/nginx/sbin/nginx
             green "更换成功！！"
-            green "新path：$new_path"
+            green "新path：$path"
             ;;
         14)
             echo
