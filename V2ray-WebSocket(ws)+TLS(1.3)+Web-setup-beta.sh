@@ -182,7 +182,7 @@ readTlsConfig()
 }
 
 #读取v2ray_protocol配置
-readProtocolConfig
+readProtocolConfig()
 {
     tyblue "---------------------请选择V2Ray要使用协议---------------------"
     tyblue " 1. VLESS"
@@ -191,7 +191,7 @@ readProtocolConfig
     green "不使用cdn推荐VLESS，cdn推荐使用VMess"
     echo
     protocol=""
-    while [[ "$protocol" != "1" && "$protocol" != "2" && "$protocol" != "3" && "$protocol" != "4" ]]
+    while [[ "$protocol" != "1" && "$protocol" != "2" && "$protocol" != "3" ]]
     do
         read -p "您的选择是：" protocol
     done
@@ -1053,9 +1053,9 @@ setsshd()
         echo "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" >> /etc/ssh/sshd_config
         service sshd restart
         green  "----------------------配置完成----------------------"
-        tyblue " 请重新进行ssh连接，然后再次运行此脚本"
+        tyblue " 请重新进行ssh连接(即重新登陆服务器)，并再次运行此脚本"
         yellow " 按回车键退出。。。。"
-        read asfyerbsd
+        read -s
         exit 0
     fi
 }
@@ -1334,7 +1334,7 @@ install_update_v2ray_ws_tls()
         tyblue " 将v.qq.com修改为你要镜像的网站"
     fi
     echo
-    tyblue " 脚本最后更新时间：2020.08.03"
+    tyblue " 脚本最后更新时间：2020.08.13"
     echo
     red    " 此脚本仅供交流学习使用，请勿使用此脚本行违法之事。网络非法外之地，行非法之事，必将接受法律制裁!!!!"
     tyblue " 2019.11"
@@ -1343,7 +1343,7 @@ install_update_v2ray_ws_tls()
 #配置v2ray
 config_v2ray()
 {
-    cat > /etc/v2ray/config.json <<EOF
+cat > /etc/v2ray/config.json <<EOF
 {
   "inbounds": [
     {
@@ -1351,7 +1351,7 @@ config_v2ray()
       "listen": "127.0.0.1",
 EOF
 if [ $protocol -eq 1 ]; then
-    cat >> /etc/v2ray/config.json <<EOF
+cat >> /etc/v2ray/config.json <<EOF
       "protocol": "vless",
       "settings": {
         "clients": [
@@ -1359,12 +1359,12 @@ if [ $protocol -eq 1 ]; then
             "id": "$v2id",
             "level": 1
         }
-        ],
-        "decryption": "none"
+      ],
+      "decryption": "none"
     },
 EOF
-elif [ $protocol -eq 2]; then
-    cat >> /etc/v2ray/config.json <<EOF
+elif [ $protocol -eq 2 ]; then
+cat >> /etc/v2ray/config.json <<EOF
       "protocol": "vmess",
       "settings": {
         "clients": [
@@ -1376,7 +1376,7 @@ elif [ $protocol -eq 2]; then
         ]
       },
 EOF
-    elif [ $protocol -eq 3]; then
+elif [ $protocol -eq 3 ]; then
 cat >> /etc/v2ray/config.json <<EOF
       "protocol": "socks",
       "settings": {
@@ -1385,7 +1385,7 @@ cat >> /etc/v2ray/config.json <<EOF
         "userLevel": 10
       },
 EOF
-    fi
+fi
 cat >> /etc/v2ray/config.json <<EOF
       "streamSettings": {
         "network": "ws",
@@ -1477,12 +1477,15 @@ get_web()
 #更换协议
 change_protocol()
 {
-    get_base_imformation
+    get_base_information
     old_protocol=$protocol
     readProtocolConfig
     if [ $old_protocol -eq $protocol ]; then
         red "协议未更换"
         return
+    fi
+    if [ $old_protocol -eq 3 ]; then
+        v2id=`cat /proc/sys/kernel/random/uuid`
     fi
     config_v2ray
     service v2ray restart
@@ -1624,11 +1627,7 @@ start_menu()
     tyblue "      (会覆盖原有域名配置，安装过程中域名输错了造成V2Ray无法启动可以用此选项修复)"
     tyblue "   9. 添加域名"
     tyblue "  10. 删除域名"
-    if [ $is_installed == 1 ] && ! grep -q "id" /etc/v2ray/config.json >> /dev/null 2>&1 ; then
-        tyblue "  11. 返回vmess作为底层传输协议"
-    else
-        tyblue "  11. 使用socks(5)作为底层传输协议(降低计算量、延迟)(beta)"
-    fi
+    tyblue "  11. 修改V2Ray底层传输协议"
     tyblue "  12. 查看/修改用户ID(id)"
     tyblue "  13. 查看/修改路径(path)"
     echo
