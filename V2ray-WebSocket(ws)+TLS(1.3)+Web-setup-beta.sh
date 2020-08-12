@@ -184,13 +184,14 @@ readTlsConfig()
 #读取v2ray_protocol配置
 readProtocolConfig()
 {
+    echo -e "\n\n\n"
     tyblue "---------------------请选择V2Ray要使用协议---------------------"
     tyblue " 1. VLESS(新协议)"
     tyblue " 2. VMess"
     tyblue " 3. socks(5)"
     echo
     green "不使用cdn推荐VLESS，cdn推荐使用VMess"
-    yellow "VLESS需要V2RayNG客户端版本>=3.2.1，V2Ray版本>=4.27.0"
+    yellow "VLESS需要V2RayN客户端版本>=3.21，V2RayNG客户端版本>=1.3.0，V2Ray版本>=4.27.0"
     echo
     protocol=""
     while [[ "$protocol" != "1" && "$protocol" != "2" && "$protocol" != "3" ]]
@@ -1241,6 +1242,7 @@ install_update_v2ray_ws_tls()
     mkdir /etc/nginx/tcmalloc_temp
     chmod 777 /etc/nginx/tcmalloc_temp
     cd ..
+    config_service_nginx
 ##安装nignx完成
 
 #安装acme.sh
@@ -1382,10 +1384,10 @@ cat >> /etc/v2ray/config.json <<EOF
           {
             "id": "$v2id",
             "level": 1
-        }
-      ],
-      "decryption": "none"
-    },
+          }
+        ],
+        "decryption": "none"
+      },
 EOF
     elif [ $protocol -eq 2 ]; then
 cat >> /etc/v2ray/config.json <<EOF
