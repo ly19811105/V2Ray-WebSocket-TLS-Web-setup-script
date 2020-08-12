@@ -185,10 +185,12 @@ readTlsConfig()
 readProtocolConfig()
 {
     tyblue "---------------------请选择V2Ray要使用协议---------------------"
-    tyblue " 1. VLESS"
+    tyblue " 1. VLESS(新协议)"
     tyblue " 2. VMess"
     tyblue " 3. socks(5)"
+    echo
     green "不使用cdn推荐VLESS，cdn推荐使用VMess"
+    yellow "VLESS需要V2RayNG客户端版本>=3.2.1，V2Ray版本>=4.27.0"
     echo
     protocol=""
     while [[ "$protocol" != "1" && "$protocol" != "2" && "$protocol" != "3" ]]
@@ -1087,7 +1089,7 @@ EOF
             $HOME/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html/$1 -k ec-256 -ak ec-256 --ocsp
             ;;
     esac
-    $HOME/.acme.sh/acme.sh --installcert -d $1 --key-file /etc/nginx/certs/$1.key --fullchain-file /etc/nginx/certs/$1.cer --reloadcmd "(systemctl restart nginx && echo 'install domain certs success') || echo 'install domain certs failed'" --ecc
+    $HOME/.acme.sh/acme.sh --installcert -d $1 --key-file /etc/nginx/certs/$1.key --fullchain-file /etc/nginx/certs/$1.cer --reloadcmd "systemctl restart nginx" --ecc
     systemctl stop nginx
     mv /etc/nginx/conf.d/v2ray.conf.bak /etc/nginx/conf.d/v2ray.conf
 }
@@ -1357,6 +1359,7 @@ PrivateTmp=true
 [Install]
 WantedBy=multi-user.target
 EOF
+    chmod 0644 /etc/systemd/system/nginx.service
     systemctl daemon-reload
     systemctl enable nginx.service
 }
