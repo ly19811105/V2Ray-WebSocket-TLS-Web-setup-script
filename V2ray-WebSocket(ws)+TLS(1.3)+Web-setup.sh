@@ -1698,7 +1698,7 @@ start_menu()
                 exit 1
             fi
             rm -rf "$0"
-            wget -O "$0" "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
+            wget -O "$0" "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2ray-WebSocket(ws)+TLS(1.3)+Web-setup-beta.sh"
             chmod +x "$0"
             "$0" --update
             ;;
@@ -1897,9 +1897,11 @@ start_menu()
             if [ $choice == "n" ]; then
                 exit 0
             fi
+            local temp_old_path="$path"
             tyblue "---------------请输入新的path(带\"/\")---------------"
             read path
             config_v2ray
+            sed -i s#"$temp_old_path"#"$path"# /etc/nginx/conf.d/v2ray.conf
             service v2ray restart
             systemctl restart nginx
             green "更换成功！！"
