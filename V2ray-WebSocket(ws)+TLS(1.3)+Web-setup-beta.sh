@@ -1897,9 +1897,11 @@ start_menu()
             if [ $choice == "n" ]; then
                 exit 0
             fi
+            local temp_old_path="$path"
             tyblue "---------------请输入新的path(带\"/\")---------------"
             read path
             config_v2ray
+            sed -i s#"$temp_old_path"#"$path"# /etc/nginx/conf.d/v2ray.conf
             service v2ray restart
             systemctl restart nginx
             green "更换成功！！"
