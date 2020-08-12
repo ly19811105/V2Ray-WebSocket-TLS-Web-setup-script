@@ -668,13 +668,16 @@ uninstall_firewall()
 #卸载v2ray和nginx
 remove_v2ray_nginx()
 {
+    systemctl stop nginx
     /etc/nginx/sbin/nginx -s stop
-    sleep 1s
     pkill nginx
     service v2ray stop
-    #service v2ray disable
+    systemctl disable v2ray.service
+    rm -rf /etc/systemd/system/v2ray.service
     rm -rf /usr/bin/v2ray
     rm -rf /etc/v2ray
+    systemctl disable nginx.service
+    rm -rf /etc/systemd/system/nginx.service
     rm -rf /etc/nginx
     is_installed=0
 }
@@ -1073,11 +1076,7 @@ server {
     root /etc/nginx/html/$1;
 }
 EOF
-    sleep 1s
-    /etc/nginx/sbin/nginx -s stop
-    sleep 1s
-    pkill nginx
-    /etc/nginx/sbin/nginx
+    systemctl restart nginx
     case "$2" in
         1)
             $HOME/.acme.sh/acme.sh --issue -d $1 -d www.$1 --webroot /etc/nginx/html/$1 -k ec-256 -ak ec-256 --ocsp
@@ -1088,11 +1087,8 @@ EOF
             $HOME/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html/$1 -k ec-256 -ak ec-256 --ocsp
             ;;
     esac
-    $HOME/.acme.sh/acme.sh --installcert -d $1 --key-file /etc/nginx/certs/$1.key --fullchain-file /etc/nginx/certs/$1.cer --reloadcmd "sleep 1s && /etc/nginx/sbin/nginx -s stop && sleep 1s && /etc/nginx/sbin/nginx && echo 'install domain certs success' || echo 'install domain certs failed'" --ecc
-    sleep 1s
-    /etc/nginx/sbin/nginx -s stop
-    sleep 1s
-    pkill nginx
+    $HOME/.acme.sh/acme.sh --installcert -d $1 --key-file /etc/nginx/certs/$1.key --fullchain-file /etc/nginx/certs/$1.cer --reloadcmd "(systemctl restart nginx && echo 'install domain certs success') || echo 'install domain certs failed'" --ecc
+    systemctl stop nginx
     mv /etc/nginx/conf.d/v2ray.conf.bak /etc/nginx/conf.d/v2ray.conf
 }
 
@@ -1123,9 +1119,7 @@ install_update_v2ray_ws_tls()
     yum -y install lsb-release
     #系统版本
     systemVersion=`lsb_release -r --short`
-    /etc/nginx/sbin/nginx -s stop
-    sleep 1s
-    pkill nginx
+    systemctl stop nginx
     service v2ray stop
     uninstall_firewall
     doupdate
@@ -1293,7 +1287,7 @@ install_update_v2ray_ws_tls()
         done
         mv domain_backup/* /etc/nginx/html
     fi
-    /etc/nginx/sbin/nginx
+    systemctl start nginx
     service v2ray start
     curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1   #激活tcp_fast_open
     curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1
@@ -1305,6 +1299,11 @@ install_update_v2ray_ws_tls()
     echo -e "\n\n\n"
     tyblue "-------------------安装完成-------------------"
     if [ $protocol -ne 3 ]; then
+        if [ $protocol -eq 1 ]; then
+            tyblue " 服务器类型：VLESS"
+        elif [ $protocol -eq 2 ]; then
+            tyblue " 服务器类型：VMess"
+        fi
         if [ $domainconfig -eq 1  ]; then
             tyblue " 地址：www.${domain}或${domain}"
         else
@@ -1325,8 +1324,6 @@ install_update_v2ray_ws_tls()
     else
         echo_end_socks
     fi
-    yellow " 注意事项：如重新启动服务器，请执行/etc/nginx/sbin/nginx"
-    yellow "           或运行脚本，选择重启服务选项"
     echo
     if [ $pretend -eq 2 ]; then
         tyblue " 如果要更换被镜像的网站"
@@ -1340,6 +1337,30 @@ install_update_v2ray_ws_tls()
     tyblue " 2019.11"
 }
 
+#开机自动运行nginx
+config_service_nginx()
+{
+    systemctl disable nginx.service
+cat > /etc/systemd/system/nginx.service << EOF
+[Unit]
+Description=The NGINX HTTP and reverse proxy server
+After=syslog.target network-online.target remote-fs.target nss-lookup.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=root
+ExecStart=/etc/nginx/sbin/nginx
+ExecStop=/etc/nginx/sbin/nginx -s stop
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl daemon-reload
+    systemctl enable nginx.service
+}
+
 #配置v2ray
 config_v2ray()
 {
@@ -1350,7 +1371,7 @@ cat > /etc/v2ray/config.json <<EOF
       "port": $port,
       "listen": "127.0.0.1",
 EOF
-if [ $protocol -eq 1 ]; then
+    if [ $protocol -eq 1 ]; then
 cat >> /etc/v2ray/config.json <<EOF
       "protocol": "vless",
       "settings": {
@@ -1363,7 +1384,7 @@ cat >> /etc/v2ray/config.json <<EOF
       "decryption": "none"
     },
 EOF
-elif [ $protocol -eq 2 ]; then
+    elif [ $protocol -eq 2 ]; then
 cat >> /etc/v2ray/config.json <<EOF
       "protocol": "vmess",
       "settings": {
@@ -1376,7 +1397,7 @@ cat >> /etc/v2ray/config.json <<EOF
         ]
       },
 EOF
-elif [ $protocol -eq 3 ]; then
+    elif [ $protocol -eq 3 ]; then
 cat >> /etc/v2ray/config.json <<EOF
       "protocol": "socks",
       "settings": {
@@ -1385,7 +1406,7 @@ cat >> /etc/v2ray/config.json <<EOF
         "userLevel": 10
       },
 EOF
-fi
+    fi
 cat >> /etc/v2ray/config.json <<EOF
       "streamSettings": {
         "network": "ws",
@@ -1703,12 +1724,8 @@ start_menu()
             green  "----------------V2ray-WebSocket+TLS+Web已删除----------------"
             ;;
         6)
-            /etc/nginx/sbin/nginx -s stop
-            service v2ray stop
-            sleep 1s
-            pkill nginx
-            service v2ray start
-            /etc/nginx/sbin/nginx
+            systemctl restart nginx
+            service v2ray restart
             curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1   #激活tcp_fast_open
             if [ ${v2ray_status[1]} -eq 1 ] && [ ${nginx_status[1]} -eq 1 ]; then
                 green "--------------------------重启完成--------------------------"
@@ -1717,9 +1734,7 @@ start_menu()
             fi
             ;;
         7)
-            /etc/nginx/sbin/nginx -s stop
-            sleep 1s
-            pkill nginx
+            systemctl stop nginx
             service v2ray stop
             green  "----------------V2ray-WebSocket+TLS+Web已停止----------------"
             ;;
@@ -1739,7 +1754,7 @@ start_menu()
                 exit 1
             fi
             get_web $domain $pretend
-            /etc/nginx/sbin/nginx
+            systemctl start nginx
             green "重置域名完成！！"
             case "$domainconfig" in
                 1)
@@ -1771,7 +1786,7 @@ start_menu()
             fi
             get_web $domain $pretend
             green "添加域名完成！！"
-            /etc/nginx/sbin/nginx
+            systemctl start nginx
             case "$domainconfig" in
                 1)
                     green "现在服务器地址可以填写原来的域名和www.${domain} ${domain}"
@@ -1824,7 +1839,7 @@ start_menu()
                 fi
                 ((temp++))
             done
-            /etc/nginx/sbin/nginx
+            systemctl start nginx
             green "-------删除域名完成-------"
             ;;
         11)
@@ -1881,11 +1896,7 @@ start_menu()
             read path
             config_v2ray
             service v2ray restart
-            sleep 1s
-            /etc/nginx/sbin/nginx -s stop
-            sleep 1s
-            pkill nginx
-            /etc/nginx/sbin/nginx
+            systemctl restart nginx
             green "更换成功！！"
             green "新path：$path"
             ;;
