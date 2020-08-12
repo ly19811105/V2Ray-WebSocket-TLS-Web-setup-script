@@ -1438,7 +1438,7 @@ get_base_information()
 
 get_domainlist()
 {
-    domain_list=($(grep server_name /etc/nginx/conf.d/v2ray.conf | sed 's/;//g' | awk '{prit $2}'))
+    domain_list=($(grep server_name /etc/nginx/conf.d/v2ray.conf | sed 's/;//g' | awk '{print $2}'))
     unset domain_list[0]
     local line
     for i in ${!domain_list[@]}
@@ -1467,7 +1467,7 @@ get_web()
         if ! wget -P /etc/nginx/html/$1 https://github.com/kirin10000/V2ray-WebSocket-TLS-Web-setup-script/raw/master/Website-Template.zip ; then
             red    "获取网站模板失败"
             yellow "按回车键继续或者按ctrl+c终止"
-            read asfyerbsd
+            read -s
         fi
         unzip -q -d /etc/nginx/html/$1 /etc/nginx/html/$1/*.zip
         rm -rf /etc/nginx/html/$1/*.zip
