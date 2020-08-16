@@ -75,8 +75,15 @@ else
     mem_ok=2
 fi
 
+######
+if [ -e /usr/bin/v2ray ]; then
+    yellow "当前安装V2Ray版本过旧，脚本已不再支持！"
+    yellow "请选择1选项安装重新安装"
+    sleep 2s
+fi
+
 #判断是否已经安装
-if ([ -e /usr/bin/v2ray ] || [ -e /usr/local/bin/v2ray ]) && [ -e /etc/nginx/conf.d/v2ray.conf ]; then
+if [ -e /usr/local/bin/v2ray ] && [ -e /etc/nginx/conf.d/v2ray.conf ]; then
     is_installed=1
 else
     is_installed=0
@@ -1391,66 +1398,69 @@ config_v2ray()
 {
 cat > /usr/local/etc/v2ray/05_inbounds.json <<EOF
 {
-  "inbounds": [
-    {
-      "port": $port,
-      "listen": "127.0.0.1",
+    "inbounds": [
+        {
+            "port": $port,
+            "listen": "127.0.0.1",
 EOF
     if [ $protocol -eq 1 ]; then
 cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
-      "protocol": "vless",
-      "settings": {
-        "clients": [
-          {
-            "id": "$v2id",
-            "level": 1
-          }
-        ],
-        "decryption": "none"
-      },
+            "protocol": "vless",
+            "settings": {
+            "clients": [
+                {
+                    "id": "$v2id",
+                    "level": 1
+                }
+            ],
+            "decryption": "none"
+        },
 EOF
     elif [ $protocol -eq 2 ]; then
 cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
-      "protocol": "vmess",
-      "settings": {
-        "clients": [
-          {
-            "id": "$v2id",
-            "level": 1,
-            "alterId": 0
-          }
-        ]
-      },
+        "protocol": "vmess",
+        "settings": {
+            "clients": [
+                {
+                    "id": "$v2id",
+                    "level": 1,
+                    "alterId": 0
+                }
+            ]
+        },
 EOF
     elif [ $protocol -eq 3 ]; then
 cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
-      "protocol": "socks",
-      "settings": {
-        "auth": "noauth",
-        "udp": false,
-        "userLevel": 10
-      },
+        "protocol": "socks",
+        "settings": {
+            "auth": "noauth",
+            "udp": false,
+            "userLevel": 10
+        },
 EOF
     fi
 cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
-      "streamSettings": {
-        "network": "ws",
-        "wsSettings": {
-          "path": "$path"
+        "streamSettings": {
+            "network": "ws",
+            "wsSettings": {
+                "path": "$path"
+            }
+        },
+        "sockopt": {
+            "tcpFastOpen": true
+            }
         }
-      }
-    }
-  ]
+    ]
 }
 EOF
 cat > /usr/local/etc/v2ray/06_outbounds.json << EOF
 {
-  "outbounds": [
-    {
-      "protocol": "freedom",
-      "settings": {}
-    }
-  ]
+    "outbounds": [
+        {
+            "protocol": "freedom",
+            "settings": {}
+        }
+    ]
 }
 EOF
 }
@@ -1611,7 +1621,7 @@ EOF
 #开始菜单
 start_menu()
 {
-    if [ -e /usr/local/bin/v2ray ] || [ -e /usr/bin/v2ray ]; then
+    if [ -e /usr/local/bin/v2ray ]; then
         local v2ray_status="\033[32m已安装"
     else
         local v2ray_status="\033[31m未安装"
