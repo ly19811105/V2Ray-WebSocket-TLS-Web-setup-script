@@ -1407,47 +1407,47 @@ EOF
 cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
             "protocol": "vless",
             "settings": {
-            "clients": [
-                {
-                    "id": "$v2id",
-                    "level": 1
-                }
-            ],
-            "decryption": "none"
-        },
+                "clients": [
+                    {
+                        "id": "$v2id",
+                        "level": 1
+                    }
+                ],
+                "decryption": "none"
+            },
 EOF
     elif [ $protocol -eq 2 ]; then
 cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
-        "protocol": "vmess",
-        "settings": {
-            "clients": [
-                {
-                    "id": "$v2id",
-                    "level": 1,
-                    "alterId": 0
-                }
-            ]
-        },
+            "protocol": "vmess",
+            "settings": {
+                "clients": [
+                    {
+                        "id": "$v2id",
+                        "level": 1,
+                        "alterId": 0
+                    }
+                ]
+            },
 EOF
     elif [ $protocol -eq 3 ]; then
 cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
-        "protocol": "socks",
-        "settings": {
-            "auth": "noauth",
-            "udp": false,
-            "userLevel": 10
-        },
+            "protocol": "socks",
+            "settings": {
+                "auth": "noauth",
+                "udp": false,
+                "userLevel": 10
+            },
 EOF
     fi
 cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
-        "streamSettings": {
-            "network": "ws",
-            "wsSettings": {
-                "path": "$path"
-            }
-        },
-        "sockopt": {
-            "tcpFastOpen": true
+            "streamSettings": {
+                "network": "ws",
+                "wsSettings": {
+                    "path": "$path"
+                }
+            },
+            "sockopt": {
+                "tcpFastOpen": true
             }
         }
     ]
