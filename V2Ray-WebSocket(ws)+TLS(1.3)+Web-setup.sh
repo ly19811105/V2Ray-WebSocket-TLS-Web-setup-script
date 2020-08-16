@@ -76,10 +76,10 @@ else
 fi
 
 ######
-if [ -e /usr/bin/v2ray ]; then
-    yellow "当前安装V2Ray版本过旧，脚本已不再支持！"
+if [ -e /usr/bin/v2ray ] && [ -e /etc/nginx ]; then
+    yellow "当前安装的V2Ray版本过旧，脚本已不再支持！"
     yellow "请选择1选项安装重新安装"
-    sleep 2s
+    sleep 3s
 fi
 
 #判断是否已经安装
@@ -678,10 +678,10 @@ uninstall_firewall()
 #卸载v2ray和nginx
 remove_v2ray_nginx()
 {
+    systemctl stop v2ray
     curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh
     bash install-release.sh --remove
-    systemctl stop v2ray
-    systemctl disable v2ray.service
+    systemctl disable v2ray
     rm -rf /etc/systemd/system/v2ray.service
     rm -rf /usr/bin/v2ray
     rm -rf /etc/v2ray
@@ -692,7 +692,7 @@ remove_v2ray_nginx()
     systemctl stop nginx
     /etc/nginx/sbin/nginx -s stop
     pkill nginx
-    systemctl disable nginx.service
+    systemctl disable nginx
     rm -rf /etc/systemd/system/nginx.service
     systemctl daemon-reload
     rm -rf /etc/nginx
@@ -1278,6 +1278,7 @@ install_update_v2ray_ws_tls()
             read -s
         fi
     fi
+    systemctl enable v2ray
     systemctl stop v2ray
     if [ $update == 0 ]; then
         path=$(cat /dev/urandom | head -c 8 | md5sum | head -c 7)
@@ -1371,7 +1372,7 @@ get_random_port()
 #开机自动运行nginx
 config_service_nginx()
 {
-    systemctl disable nginx.service
+    systemctl disable nginx
 cat > /etc/systemd/system/nginx.service << EOF
 [Unit]
 Description=The NGINX HTTP and reverse proxy server
@@ -1390,7 +1391,7 @@ WantedBy=multi-user.target
 EOF
     chmod 0644 /etc/systemd/system/nginx.service
     systemctl daemon-reload
-    systemctl enable nginx.service
+    systemctl enable nginx
 }
 
 #配置v2ray
