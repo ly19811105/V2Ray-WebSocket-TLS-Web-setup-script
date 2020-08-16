@@ -40,19 +40,19 @@ command -v wget > /dev/null 2>&1 || yum -y install wget
 ### 2. 获取脚本
 
 ```bash
-wget --no-check-certificate "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
+wget --no-check-certificate "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2Ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
 ```
 
 ### 3. 增加脚本可执行权限
 
 ```bash
-chmod +x "V2ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
+chmod +x "V2Ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
 ```
 
 ### 4. 执行脚本
 
 ```bash
-./"V2ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
+./"V2Ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
 ```
 
 ### 5. 根据脚本提示完成安装
