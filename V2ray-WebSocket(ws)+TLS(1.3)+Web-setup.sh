@@ -76,7 +76,7 @@ else
 fi
 
 #判断是否已经安装
-if [ -e /etc/v2ray/config.json ] && [ -e /etc/nginx/conf.d/v2ray.conf ]; then
+if ([ -e /usr/bin/v2ray ] || [ -e /usr/local/bin/v2ray ]) && [ -e /etc/nginx/conf.d/v2ray.conf ]; then
     is_installed=1
 else
     is_installed=0
@@ -671,16 +671,23 @@ uninstall_firewall()
 #卸载v2ray和nginx
 remove_v2ray_nginx()
 {
-    systemctl stop nginx
-    /etc/nginx/sbin/nginx -s stop
-    pkill nginx
-    service v2ray stop
+    curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh
+    bash install-release.sh --remove
+    systemctl stop v2ray
     systemctl disable v2ray.service
     rm -rf /etc/systemd/system/v2ray.service
     rm -rf /usr/bin/v2ray
     rm -rf /etc/v2ray
+    rm -rf /etc/systemd/system/v2ray@.service
+    rm -rf /usr/local/bin/v2ray
+    rm -rf /usr/local/etc/v2ray
+    systemctl daemon-reload
+    systemctl stop nginx
+    /etc/nginx/sbin/nginx -s stop
+    pkill nginx
     systemctl disable nginx.service
     rm -rf /etc/systemd/system/nginx.service
+    systemctl daemon-reload
     rm -rf /etc/nginx
     is_installed=0
 }
@@ -1123,7 +1130,7 @@ install_update_v2ray_ws_tls()
     #系统版本
     systemVersion=`lsb_release -r --short`
     systemctl stop nginx
-    service v2ray stop
+    systemctl stop v2ray
     uninstall_firewall
     doupdate
     uninstall_firewall
@@ -1249,24 +1256,27 @@ install_update_v2ray_ws_tls()
     curl https://get.acme.sh | sh
     $HOME/.acme.sh/acme.sh --upgrade --auto-upgrade
 
-    bash <(curl -L -s https://install.direct/go.sh)
-    if ! [ -e /usr/bin/v2ray ] || ! [ -e /etc/v2ray/config.json ]; then
-        bash <(curl -L -s https://install.direct/go.sh)
-        if ! [ -e /usr/bin/v2ray ] || ! [ -e /etc/v2ray/config.json ]; then
-            yellow "v2ray安装失败"
+#安装v2ray
+    if ! curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh; then
+        if ! curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh; then
+            yellow "获取V2Ray安装脚本失败"
             yellow "按回车键继续或者按ctrl+c终止"
             read -s
         fi
     fi
-    service v2ray stop
+    if ! bash install-release.sh; then
+        if ! bash install-release.sh; then
+            yellow "V2Ray安装失败"
+            yellow "按回车键继续或者按ctrl+c终止"
+            read -s
+        fi
+    fi
+    systemctl stop v2ray
     if [ $update == 0 ]; then
-        local temp_protocol=$protocol
-        local temp_tlsversion=$tlsVersion
-        get_base_information
         path=$(cat /dev/urandom | head -c 8 | md5sum | head -c 7)
         path="/$path"
-        protocol=$temp_protocol
-        tlsVersion=$temp_tlsversion
+        v2id=`cat /proc/sys/kernel/random/uuid`
+        get_random_port
     fi
     config_v2ray
 
@@ -1292,7 +1302,7 @@ install_update_v2ray_ws_tls()
         mv domain_backup/* /etc/nginx/html
     fi
     systemctl start nginx
-    service v2ray start
+    systemctl start v2ray
     curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1   #激活tcp_fast_open
     curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1
     rm -rf /temp_install_update_v2ray_ws_tls
@@ -1341,6 +1351,16 @@ install_update_v2ray_ws_tls()
     tyblue " 2019.11"
 }
 
+#获取随机端口号
+get_random_port()
+{
+    port=`shuf -i 1000-65535 -n1`
+    while netstat -at | awk '{print $4}' | tail -n +3 | awk -F : '{print $2}' | grep -q ^$port$ || netstat -at | awk '{print $4}' | tail -n +3 | awk -F : '{print $2}' | grep -q ^$port$
+    do
+        port=`shuf -i 1000-65535 -n1`
+    done
+}
+
 #开机自动运行nginx
 config_service_nginx()
 {
@@ -1369,7 +1389,7 @@ EOF
 #配置v2ray
 config_v2ray()
 {
-cat > /etc/v2ray/config.json <<EOF
+cat > /usr/local/etc/v2ray/05_inbounds.json <<EOF
 {
   "inbounds": [
     {
@@ -1377,7 +1397,7 @@ cat > /etc/v2ray/config.json <<EOF
       "listen": "127.0.0.1",
 EOF
     if [ $protocol -eq 1 ]; then
-cat >> /etc/v2ray/config.json <<EOF
+cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
       "protocol": "vless",
       "settings": {
         "clients": [
@@ -1390,7 +1410,7 @@ cat >> /etc/v2ray/config.json <<EOF
       },
 EOF
     elif [ $protocol -eq 2 ]; then
-cat >> /etc/v2ray/config.json <<EOF
+cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
       "protocol": "vmess",
       "settings": {
         "clients": [
@@ -1403,7 +1423,7 @@ cat >> /etc/v2ray/config.json <<EOF
       },
 EOF
     elif [ $protocol -eq 3 ]; then
-cat >> /etc/v2ray/config.json <<EOF
+cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
       "protocol": "socks",
       "settings": {
         "auth": "noauth",
@@ -1412,7 +1432,7 @@ cat >> /etc/v2ray/config.json <<EOF
       },
 EOF
     fi
-cat >> /etc/v2ray/config.json <<EOF
+cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
       "streamSettings": {
         "network": "ws",
         "wsSettings": {
@@ -1420,7 +1440,11 @@ cat >> /etc/v2ray/config.json <<EOF
         }
       }
     }
-  ],
+  ]
+}
+EOF
+cat > /usr/local/etc/v2ray/06_outbounds.json << EOF
+{
   "outbounds": [
     {
       "protocol": "freedom",
@@ -1434,7 +1458,7 @@ EOF
 #获取配置信息 path port v2id protocol tlsVersion
 get_base_information()
 {
-    path=`grep path /etc/v2ray/config.json`
+    path=`grep path /usr/local/etc/v2ray/05_inbounds.json`
     path=${path##*' '}
     path=${path#*'"'}
     path=${path%'"'*}
@@ -1443,15 +1467,15 @@ get_base_information()
     else
         tlsVersion=2
     fi
-    port=`grep port /etc/v2ray/config.json`
+    port=`grep port /usr/local/etc/v2ray/05_inbounds.json`
     port=${port##*' '}
     port=${port%%,*}
-    if grep -q "id" /etc/v2ray/config.json ; then
-        v2id=`grep id /etc/v2ray/config.json`
+    if grep -q "id" /usr/local/etc/v2ray/05_inbounds.json ; then
+        v2id=`grep id /usr/local/etc/v2ray/05_inbounds.json`
         v2id=${v2id##*' '}
         v2id=${v2id#*'"'}
         v2id=${v2id%'"'*}
-        if grep -q "vless" /etc/v2ray/config.json; then
+        if grep -q "vless" /usr/local/etc/v2ray/05_inbounds.json; then
             protocol=1
         else
             protocol=2
@@ -1514,7 +1538,7 @@ change_protocol()
         v2id=`cat /proc/sys/kernel/random/uuid`
     fi
     config_v2ray
-    service v2ray restart
+    systemctl restart v2ray
     green "更换完成！！"
     if [ $old_protocol -eq 3 ]; then
         green "用户ID：$v2id"
@@ -1587,12 +1611,12 @@ EOF
 #开始菜单
 start_menu()
 {
-    if [ -e /usr/bin/v2ray ]; then
+    if [ -e /usr/local/bin/v2ray ] || [ -e /usr/bin/v2ray ]; then
         local v2ray_status="\033[32m已安装"
     else
         local v2ray_status="\033[31m未安装"
     fi
-    if [ -e /usr/bin/v2ray ] && ps -aux | grep "/usr/bin/v2ray" | grep -v -q grep; then
+    if systemctl is-active v2ray > /dev/null 2>&1; then
         v2ray_status="${v2ray_status}                \033[32m运行中"
         v2ray_status[1]=1
     else
@@ -1604,7 +1628,7 @@ start_menu()
     else
         local nginx_status="\033[31m未安装"
     fi
-    if [ $is_installed == 1 ] && ps -aux | grep "/etc/nginx/sbin/nginx" | grep -v -q grep; then
+    if systemctl is-active nginx > /dev/null 2>&1; then
         nginx_status="${nginx_status}                \033[32m运行中"
         nginx_status[1]=1
     else
@@ -1711,9 +1735,16 @@ start_menu()
             rm -rf /temp_install_update_v2ray_ws_tls
             ;;
         4)
-            if ! bash <(curl -L -s https://install.direct/go.sh) ; then
+            rm -rf /temp_install_update_v2ray_ws_tls
+            mkdir /temp_install_update_v2ray_ws_tls
+            cd /temp_install_update_v2ray_ws_tls
+            if ! curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh; then
+                yellow "获取V2Ray安装脚本失败"
+            fi
+            if ! bash install-release.sh; then
                 yellow "v2ray更新失败"
             fi
+            rm -rf /temp_install_update_v2ray_ws_tls
             ;;
         5)
             choice=""
@@ -1730,8 +1761,7 @@ start_menu()
             ;;
         6)
             systemctl restart nginx
-            service v2ray restart
-            curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1   #激活tcp_fast_open
+            systemctl restart v2ray
             if [ ${v2ray_status[1]} -eq 1 ] && [ ${nginx_status[1]} -eq 1 ]; then
                 green "--------------------------重启完成--------------------------"
             else
@@ -1740,7 +1770,7 @@ start_menu()
             ;;
         7)
             systemctl stop nginx
-            service v2ray stop
+            systemctl stop v2ray
             green  "----------------V2ray-WebSocket+TLS+Web已停止----------------"
             ;;
         8)
@@ -1877,7 +1907,7 @@ start_menu()
             tyblue "-------------请输入新的ID-------------"
             read v2id
             config_v2ray
-            service v2ray restart
+            systemctl restart v2ray
             green "更换成功！！"
             green "新ID：$v2id"
             ;;
@@ -1902,7 +1932,7 @@ start_menu()
             read path
             config_v2ray
             sed -i s#"$temp_old_path"#"$path"# /etc/nginx/conf.d/v2ray.conf
-            service v2ray restart
+            systemctl restart v2ray
             systemctl restart nginx
             green "更换成功！！"
             green "新path：$path"
