@@ -67,7 +67,7 @@ chmod +x "V2Ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
 
 1.本文链接(官网)：https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script
 
-2.参考教程：https://www.v2ray.com/ https://guide.v2fly.org/
+2.参考教程：https://www.v2fly.org/config/overview.html https://guide.v2fly.org/
 
 3.域名证书申请：https://github.com/acmesh-official/acme.sh
 
