@@ -1744,6 +1744,7 @@ start_menu()
             if ! bash install-release.sh; then
                 yellow "v2ray更新失败"
             fi
+            green "----------------升级完成----------------"
             rm -rf /temp_install_update_v2ray_ws_tls
             ;;
         5)
