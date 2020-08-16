@@ -1444,10 +1444,10 @@ cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
                 "network": "ws",
                 "wsSettings": {
                     "path": "$path"
+                },
+                "sockopt": {
+                    "tcpFastOpen": true
                 }
-            },
-            "sockopt": {
-                "tcpFastOpen": true
             }
         }
     ]
