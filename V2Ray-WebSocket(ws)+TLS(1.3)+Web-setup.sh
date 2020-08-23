@@ -619,19 +619,30 @@ doupdate()
             echo
             red "检测到内存过小，升级系统可能导致无法开机，请谨慎选择"
         fi
+        tyblue "------------------------------------------------------------------"
+        echo
+        choice=""
+        while [ "$choice" != "1" -a "$choice" != "2" -a "$choice" != "3" ]
+        do
+            read -p "您的选择是：" choice
+        done
     else
         green  " 1. 仅更新已安装软件"
         red    " 2. 不更新"
+        tyblue "------------------------------------------------------------------"
+        echo
+        choice=""
+        while [ "$choice" != "1" -a "$choice" != "2" ]
+        do
+            read -p "您的选择是：" choice
+        done
     fi
-    tyblue "------------------------------------------------------------------"
-    echo
-    choice=""
-    while [ "$choice" != "1" -a "$choice" != "2" -a "$choice" != "3" ]
-    do
-        read -p "您的选择是：" choice
-    done
     if [[ "$release" == "ubuntu" && "$choice" == "1" ]] ; then
         updateSystem
+        apt -y --purge autoremove
+        apt clean
+        yum -y autoremove
+        yum clean all
     elif [[ "$release" == "ubuntu" && "$choice" == "2" || "$release" == "centos" && "$choice" == "1" ]]; then
         tyblue "-----------------------即将开始更新-----------------------"
         yellow " 更新过程中若有问话/对话框，优先选择yes/y/第一个选项"
@@ -645,10 +656,6 @@ doupdate()
         yum -y autoremove
         yum clean all
     fi
-    apt -y --purge autoremove
-    apt clean
-    yum -y autoremove
-    yum clean all
 }
 
 
@@ -658,7 +665,8 @@ uninstall_firewall()
     ufw disable
     apt -y purge firewalld
     apt -y purge ufw
-    apt -y purge aliyun*
+    apt -y purge aliyun-assist
+    yum -y remove aliyun_assist
     systemctl disable firewalld
     yum -y remove firewalld
     rm -rf $(find / -name *aliyun*)
@@ -1155,8 +1163,6 @@ install_update_v2ray_ws_tls()
     cd /temp_install_update_v2ray_ws_tls
     install_bbr
     apt -y -f install
-    apt -y --purge autoremove
-    yum -y autoremove
     #读取域名
     if [ $update == 0 ]; then
         readDomain
@@ -1166,7 +1172,7 @@ install_update_v2ray_ws_tls()
         get_domainlist
         get_base_information
     fi
-    if ([ $release == centos ] || [ $release == redhat ]) && ! yum -y install gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed perl-Data-Dumper geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make openssl crontabs; then
+    if ([ $release == centos ] || [ $release == redhat ]) && ! yum -y install gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed perl-Data-Dumper perl-IPC-Cmd geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make openssl crontabs; then
         yellow "依赖安装失败"
         yellow "按回车键继续或者ctrl+c退出"
         read -s
@@ -1209,9 +1215,7 @@ install_update_v2ray_ws_tls()
         fi
     fi
     ##libxml2-dev非必须
-    apt -y --purge autoremove
     apt clean
-    yum -y autoremove
     yum clean all
 
 ##安装nginx
@@ -1311,8 +1315,6 @@ install_update_v2ray_ws_tls()
     fi
     systemctl start nginx
     systemctl start v2ray
-    curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1   #激活tcp_fast_open
-    curl --tcp-fastopen https://127.0.0.1 >> /dev/null 2>&1
     rm -rf /temp_install_update_v2ray_ws_tls
     if [ $update == 1 ]; then
         green "-------------------升级完成-------------------"
@@ -1459,7 +1461,12 @@ cat > /usr/local/etc/v2ray/06_outbounds.json << EOF
     "outbounds": [
         {
             "protocol": "freedom",
-            "settings": {}
+            "settings": {},
+            "streamSettings": {
+                "sockopt": {
+                    "tcpFastOpen": true
+                }
+            }
         }
     ]
 }
