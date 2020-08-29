@@ -1126,39 +1126,58 @@ EOF
     mv $nginx_config.bak $nginx_config
 }
 
-check_installed()
+
+#安装程序主体
+install_update_v2ray_ws_tls()
 {
-    if [ $release == ubuntu ] || [ $release == debian ]; then
-        if ! dpkg -s $1 2>&1 >/dev/null; then
-            if ! apt -y install $1; then
-                apt update
+    check_important_dependence_installed()
+    {
+        if [ $release == ubuntu ] || [ $release == debian ]; then
+            if ! dpkg -s $1 2>&1 >/dev/null; then
                 if ! apt -y install $1; then
+                    apt update
+                    if ! apt -y install $1; then
+                        yellow "重要组件安装失败！！"
+                        yellow "按回车键继续或者ctrl+c退出"
+                        read -s
+                    fi
+                fi
+            fi
+        else
+            if ! rpm -q $2 2>&1 >/dev/null; then
+                if ! yum -y install $2; then
                     yellow "重要组件安装失败！！"
                     yellow "按回车键继续或者ctrl+c退出"
                     read -s
                 fi
             fi
         fi
-    else
-        if ! rpm -q $2 2>&1 >/dev/null; then
-            if ! yum -y install $2; then
-                yellow "重要组件安装失败！！"
+    }
+    install_dependence()
+    {
+        if [ $release == ubuntu ] || [ $release == debian ]; then
+            if ! apt -y install $1; then
+                apt update
+                if ! apt -y install $1; then
+                    yellow "依赖安装失败！！"
+                    yellow "按回车键继续或者ctrl+c退出"
+                    read -s
+                fi
+            fi
+        else
+            if ! yum -y install $1; then
+                yellow "依赖安装失败！！"
                 yellow "按回车键继续或者ctrl+c退出"
                 read -s
             fi
         fi
-    fi
-}
-
-#安装程序主体
-install_update_v2ray_ws_tls()
-{
+    }
     if ! grep -q "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" /etc/ssh/sshd_config ; then
         setsshd
     fi
     apt -y -f install
-    check_installed ca-certificates ca-certificates
-    check_installed lsb-release lsb_release
+    check_important_dependence_installed ca-certificates ca-certificates
+    check_important_dependence_installed lsb-release lsb_release
     #系统版本
     systemVersion=`lsb_release -r --short`
     systemctl stop nginx
@@ -1189,56 +1208,40 @@ install_update_v2ray_ws_tls()
         get_domainlist
         get_base_information
     fi
-    if ([ $release == centos ] || [ $release == redhat ]) && ! yum -y install gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed perl-Data-Dumper perl-IPC-Cmd geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make openssl crontabs; then
-        yellow "依赖安装失败"
-        yellow "按回车键继续或者ctrl+c退出"
-        read -s
+    ##安装依赖
+    if [ $release == centos ] || [ $release == redhat ]; then
+        install_dependence "gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed perl-Data-Dumper perl-IPC-Cmd geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make openssl crontabs"
+    else
+        if [ "$release" == "ubuntu" ] && [ "$systemVersion" == "20.04" ]; then
+            install_dependence "gcc-10 g++-10"
+            apt -y purge gcc g++ gcc-9 g++-9 gcc-8 g++-8 gcc-7 g++-7
+            apt -y autopurge
+            install_dependence "gcc-10 g++-10 libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make openssl cron"
+            ln -s -f /usr/bin/gcc-10                         /usr/bin/gcc
+            ln -s -f /usr/bin/gcc-10                         /usr/bin/cc
+            ln -s -f /usr/bin/x86_64-linux-gnu-gcc-10        /usr/bin/x86_64-linux-gnu-gcc
+            ln -s -f /usr/bin/g++-10                         /usr/bin/g++
+            ln -s -f /usr/bin/g++-10                         /usr/bin/c++
+            ln -s -f /usr/bin/x86_64-linux-gnu-g++-10        /usr/bin/x86_64-linux-gnu-g++
+            ln -s -f /usr/bin/gcc-ar-10                      /usr/bin/gcc-ar
+            ln -s -f /usr/bin/x86_64-linux-gnu-gcc-ar-10     /usr/bin/x86_64-linux-gnu-gcc-ar
+            ln -s -f /usr/bin/gcc-nm-10                      /usr/bin/gcc-nm
+            ln -s -f /usr/bin/x86_64-linux-gnu-gcc-nm-10     /usr/bin/x86_64-linux-gnu-gcc-nm
+            ln -s -f /usr/bin/gcc-ranlib-10                  /usr/bin/gcc-ranlib
+            ln -s -f /usr/bin/x86_64-linux-gnu-gcc-ranlib-10 /usr/bin/x86_64-linux-gnu-gcc-ranlib
+            ln -s -f /usr/bin/cpp-10                         /usr/bin/cpp
+            ln -s -f /usr/bin/x86_64-linux-gnu-cpp-10        /usr/bin/x86_64-linux-gnu-cpp
+            ln -s -f /usr/bin/gcov-10                        /usr/bin/gcov
+            ln -s -f /usr/bin/gcov-dump-10                   /usr/bin/gcov-dump
+            ln -s -f /usr/bin/gcov-tool-10                   /usr/bin/gcov-tool
+            ln -s -f /usr/bin/x86_64-linux-gnu-gcov-10       /usr/bin/x86_64-linux-gnu-gcov
+            ln -s -f /usr/bin/x86_64-linux-gnu-gcov-dump-10  /usr/bin/x86_64-linux-gnu-gcov-dump
+            ln -s -f /usr/bin/x86_64-linux-gnu-gcov-tool-10  /usr/bin/x86_64-linux-gnu-gcov-tool
+        else
+            install_dependence "gcc g++ libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make openssl cron"
+        fi
     fi
     ##libxml2-devel非必须
-    if [ "$release" == "ubuntu" ] && [ "$systemVersion" == "20.04" ]; then
-        apt -y install gcc-10 g++-10
-        apt -y purge gcc g++ gcc-9 g++-9 gcc-8 g++-8 gcc-7 g++-7
-        if ! apt -y install gcc-10 g++-10; then
-            apt update
-            if ! apt -y install gcc-10 g++-10; then
-                yellow "依赖安装失败"
-                yellow "按回车键继续或者ctrl+c退出"
-                read -s
-            fi
-        fi
-        apt -y autopurge
-        ln -s -f /usr/bin/gcc-10                         /usr/bin/gcc
-        ln -s -f /usr/bin/gcc-10                         /usr/bin/cc
-        ln -s -f /usr/bin/x86_64-linux-gnu-gcc-10        /usr/bin/x86_64-linux-gnu-gcc
-        ln -s -f /usr/bin/g++-10                         /usr/bin/g++
-        ln -s -f /usr/bin/g++-10                         /usr/bin/c++
-        ln -s -f /usr/bin/x86_64-linux-gnu-g++-10        /usr/bin/x86_64-linux-gnu-g++
-        ln -s -f /usr/bin/gcc-ar-10                      /usr/bin/gcc-ar
-        ln -s -f /usr/bin/x86_64-linux-gnu-gcc-ar-10     /usr/bin/x86_64-linux-gnu-gcc-ar
-        ln -s -f /usr/bin/gcc-nm-10                      /usr/bin/gcc-nm
-        ln -s -f /usr/bin/x86_64-linux-gnu-gcc-nm-10     /usr/bin/x86_64-linux-gnu-gcc-nm
-        ln -s -f /usr/bin/gcc-ranlib-10                  /usr/bin/gcc-ranlib
-        ln -s -f /usr/bin/x86_64-linux-gnu-gcc-ranlib-10 /usr/bin/x86_64-linux-gnu-gcc-ranlib
-        ln -s -f /usr/bin/cpp-10                         /usr/bin/cpp
-        ln -s -f /usr/bin/x86_64-linux-gnu-cpp-10        /usr/bin/x86_64-linux-gnu-cpp
-        ln -s -f /usr/bin/gcov-10                        /usr/bin/gcov
-        ln -s -f /usr/bin/gcov-dump-10                   /usr/bin/gcov-dump
-        ln -s -f /usr/bin/gcov-tool-10                   /usr/bin/gcov-tool
-        ln -s -f /usr/bin/x86_64-linux-gnu-gcov-10       /usr/bin/x86_64-linux-gnu-gcov
-        ln -s -f /usr/bin/x86_64-linux-gnu-gcov-dump-10  /usr/bin/x86_64-linux-gnu-gcov-dump
-        ln -s -f /usr/bin/x86_64-linux-gnu-gcov-tool-10  /usr/bin/x86_64-linux-gnu-gcov-tool
-    else
-        apt -y install gcc g++
-    fi
-    if ([ $release == ubuntu ] || [ $release == debian ]) && ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make openssl cron; then
-        apt update
-        if ! apt -y install libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make openssl cron; then
-            yellow "依赖安装失败"
-            yellow "按回车键继续或者ctrl+c退出"
-            read -s
-        fi
-    fi
-    ##libxml2-dev非必须
     apt clean
     yum clean all
 
@@ -1380,7 +1383,7 @@ install_update_v2ray_ws_tls()
         tyblue " 将v.qq.com修改为你要镜像的网站"
     fi
     echo
-    tyblue " 脚本最后更新时间：2020.08.13"
+    tyblue " 脚本最后更新时间：2020.08.29"
     echo
     red    " 此脚本仅供交流学习使用，请勿使用此脚本行违法之事。网络非法外之地，行非法之事，必将接受法律制裁!!!!"
     tyblue " 2019.11"
@@ -1761,7 +1764,7 @@ start_menu()
                 exit 1
             fi
             rm -rf "$0"
-            wget -O "$0" "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2ray-WebSocket(ws)+TLS(1.3)+Web-setup-beta.sh"
+            wget -O "$0" "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
             chmod +x "$0"
             "$0" --update
             ;;
