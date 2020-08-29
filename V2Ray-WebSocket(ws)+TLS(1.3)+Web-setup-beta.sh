@@ -1737,9 +1737,9 @@ start_menu()
             exit 1
         fi
         rm -rf "$0"
-        wget -O "$0" "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2ray-WebSocket(ws)+TLS(1.3)+Web-setup-bate.sh"
+        wget -O "$0" "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2ray-WebSocket(ws)+TLS(1.3)+Web-setup-beta.sh"
         chmod +x "$0"
-        "$0" --update
+        "$0" "--update"
     elif [ $choice -eq 3 ]; then
         apt -y -f install
         rm -rf /temp_install_update_v2ray_ws_tls
