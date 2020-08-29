@@ -1,6 +1,9 @@
 #!/bin/bash
 nginx_version=nginx-1.19.2
 openssl_version=openssl-openssl-3.0.0-alpha6
+v2ray_config="/usr/local/etc/v2ray/config.json"
+nginx_config="/etc/nginx/conf.d/v2ray.conf"
+latest_kernel_version=""
 
 #定义几个颜色
 tyblue()                           #天依蓝
@@ -83,7 +86,7 @@ if [ -e /usr/bin/v2ray ] && [ -e /etc/nginx ]; then
 fi
 
 #判断是否已经安装
-if [ -e /usr/local/bin/v2ray ] && [ -e /etc/nginx/conf.d/v2ray.conf ]; then
+if [ -e /usr/local/bin/v2ray ] && [ -e $nginx_config ]; then
     is_installed=1
 else
     is_installed=0
@@ -245,7 +248,7 @@ http {
 
     #gzip  on;
 
-    include       /etc/nginx/conf.d/v2ray.conf;
+    include       $nginx_config;
     #server {
         #listen       80;
         #server_name  localhost;
@@ -337,17 +340,17 @@ EOF
 first_domain()
 {
     get_certs $1 $2
-cat > /etc/nginx/conf.d/v2ray.conf<<EOF
+cat > $nginx_config<<EOF
 server {
     listen 80 fastopen=100 reuseport default_server;
     listen [::]:80 fastopen=100 reuseport default_server;
 EOF
     if [ $2 -eq 1 ]; then
-        echo "    return 301 https://www.$1;" >> /etc/nginx/conf.d/v2ray.conf
+        echo "    return 301 https://www.$1;" >> $nginx_config
     else
-        echo "    return 301 https://$1;" >> /etc/nginx/conf.d/v2ray.conf
+        echo "    return 301 https://$1;" >> $nginx_config
     fi
-cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
+cat >> $nginx_config<<EOF
 }
 server {
     listen 80;
@@ -362,21 +365,21 @@ server {
     ssl_certificate_key     /etc/nginx/certs/$1.key;
 EOF
     if [ $tlsVersion -eq 1 ]; then
-cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
+cat >> $nginx_config<<EOF
     ssl_protocols           TLSv1.3 TLSv1.2;
     ssl_ciphers             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
 EOF
     else
-cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
+cat >> $nginx_config<<EOF
     ssl_protocols           TLSv1.3;
 EOF
     fi
     if [ $2 -eq 1 ]; then
-        echo "    return 301 https://www.$1;" >> /etc/nginx/conf.d/v2ray.conf
+        echo "    return 301 https://www.$1;" >> $nginx_config
     else
-        echo "    return 301 https://$1;" >> /etc/nginx/conf.d/v2ray.conf
+        echo "    return 301 https://$1;" >> $nginx_config
     fi
-cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
+cat >> $nginx_config<<EOF
 }
 server {
     listen 443 ssl http2;
@@ -386,16 +389,16 @@ server {
     ssl_certificate_key     /etc/nginx/certs/$1.key;
 EOF
     if [ $tlsVersion -eq 1 ]; then
-cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
+cat >> $nginx_config<<EOF
     ssl_protocols           TLSv1.3 TLSv1.2;
     ssl_ciphers             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
 EOF
     else
-cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
+cat >> $nginx_config<<EOF
     ssl_protocols           TLSv1.3;
 EOF
     fi
-cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
+cat >> $nginx_config<<EOF
     ssl_stapling            on;
     ssl_stapling_verify     on;
     ssl_trusted_certificate /etc/nginx/certs/$1.cer;
@@ -411,16 +414,16 @@ cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
     }
 EOF
     if [ $3 -eq 2 ]; then
-cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
+cat >> $nginx_config<<EOF
     location / {
         proxy_pass https://v.qq.com;
         proxy_set_header referer "https://v.qq.com";
     }
 EOF
     fi
-    echo '}' >> /etc/nginx/conf.d/v2ray.conf
+    echo '}' >> $nginx_config
     if [ $2 -eq 1 ]; then
-        sed -i "s/server_name $1/& www.$1/" /etc/nginx/conf.d/v2ray.conf
+        sed -i "s/server_name $1/& www.$1/" $nginx_config
     fi
 }
 
@@ -429,9 +432,9 @@ EOF
 add_domain()
 {
     get_certs $1 $2
-    local old_domain=$(grep -m 1 "server_name" /etc/nginx/conf.d/v2ray.conf)
+    local old_domain=$(grep -m 1 "server_name" $nginx_config)
     old_domain=${old_domain%';'*}
-cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
+cat >> $nginx_config<<EOF
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
@@ -440,16 +443,16 @@ server {
     ssl_certificate_key     /etc/nginx/certs/$1.key;
 EOF
     if [ $tlsVersion -eq 1 ]; then
-cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
+cat >> $nginx_config<<EOF
     ssl_protocols           TLSv1.3 TLSv1.2;
     ssl_ciphers             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
 EOF
     else
-cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
+cat >> $nginx_config<<EOF
     ssl_protocols           TLSv1.3;
 EOF
     fi
-cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
+cat >> $nginx_config<<EOF
     ssl_stapling            on;
     ssl_stapling_verify     on;
     ssl_trusted_certificate /etc/nginx/certs/$1.cer;
@@ -465,19 +468,19 @@ cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
     }
 EOF
     if [ $3 -eq 2 ]; then
-cat >> /etc/nginx/conf.d/v2ray.conf<<EOF
+cat >> $nginx_config<<EOF
     location / {
         proxy_pass https://v.qq.com;
         proxy_set_header referer "https://v.qq.com";
     }
 EOF
     fi
-    echo '}' >> /etc/nginx/conf.d/v2ray.conf
+    echo '}' >> $nginx_config
     if [ $2 -eq 1 ]; then
-        sed -i "0,/$old_domain/s//$old_domain $1 www.$1/" /etc/nginx/conf.d/v2ray.conf
-        sed -i "s/server_name $1/& www.$1/" /etc/nginx/conf.d/v2ray.conf
+        sed -i "0,/$old_domain/s//$old_domain $1 www.$1/" $nginx_config
+        sed -i "s/server_name $1/& www.$1/" $nginx_config
     else
-        sed -i "0,/$old_domain/s//$old_domain $1/" /etc/nginx/conf.d/v2ray.conf
+        sed -i "0,/$old_domain/s//$old_domain $1/" $nginx_config
     fi
 }
 
@@ -707,9 +710,11 @@ remove_v2ray_nginx()
     is_installed=0
 }
 
-#获取最新版本内核列表
-get_kernel_list()
+#获取内核信息
+get_kernel_info()
 {
+    green "正在获取最新版本内核版本号。。。。"
+    local kernel_list
     local kernel_list_temp=($(wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/ | awk -F'\"v' '/v[0-9]/{print $2}' | cut -d '"' -f1 | cut -d '/' -f1 | sort -rV))
     local i=0
     local i2=0
@@ -762,12 +767,10 @@ get_kernel_list()
             ((i++))
         done
     fi
-}
-
-#安装bbr
-install_bbr()
-{
-    check_fake_version() {
+    latest_kernel_version=${kernel_list[0]}
+    your_kernel_version=`uname -r | cut -d - -f 1`
+    check_fake_version()
+    {
         local temp=${1##*.}
         if [ ${temp} -eq 0 ] ; then
             return 0
@@ -775,31 +778,37 @@ install_bbr()
             return 1
         fi
     }
-    if ! grep -q "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" /etc/sysctl.conf ; then
-        echo ' ' >> /etc/sysctl.conf
-        echo "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" >> /etc/sysctl.conf
-    fi
-    green "正在获取最新版本内核版本号。。。。"
-    local kernel_version=`uname -r | cut -d - -f 1`
-    while check_fake_version ${kernel_version} ;
+    while check_fake_version ${your_kernel_version} ;
     do
-        kernel_version=${kernel_version%.*}
+        your_kernel_version=${your_kernel_version%.*}
     done
-    get_kernel_list
-    local last_v=${kernel_list[0]}
     if [ $release == ubuntu ] || [ $release == debian ] ; then
         local rc_version=`uname -r | cut -d - -f 2`
         if [[ $rc_version =~ "rc" ]] ; then
             rc_version=${rc_version##*'rc'}
-            kernel_version=${kernel_version}-rc${rc_version}
+            your_kernel_version=${your_kernel_version}-rc${rc_version}
         fi
     else
-        last_v=${last_v%%-*}
+        latest_kernel_version=${latest_kernel_version%%-*}
+    fi
+}
+
+#安装bbr
+install_bbr()
+{
+    if ! grep -q "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" /etc/sysctl.conf ; then
+        echo ' ' >> /etc/sysctl.conf
+        echo "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" >> /etc/sysctl.conf
+    fi
+    if [ "$latest_kernel_version" == "" ]; then
+        get_kernel_info
+    else
+        sleep 3s
     fi
     echo -e "\n\n\n"
     tyblue "------------------请选择要使用的bbr版本------------------"
     green  " 1. 升级最新版内核并启用bbr(推荐)"
-    if version_ge $kernel_version 4.9 ; then
+    if version_ge $your_kernel_version 4.9 ; then
         tyblue " 2. 启用bbr"
     else
         tyblue " 2. 升级内核启用bbr"
@@ -815,10 +824,10 @@ install_bbr()
     yellow " 更换内核需重启才能生效"
     yellow " 重启后，请再次运行此脚本完成剩余安装"
     tyblue "---------------------------------------------------------"
-    tyblue " 当前内核版本：${kernel_version}"
-    tyblue " 最新内核版本：${last_v}"
+    tyblue " 当前内核版本：${your_kernel_version}"
+    tyblue " 最新内核版本：${latest_kernel_version}"
     tyblue " 当前内核是否支持bbr："
-    if version_ge $kernel_version 4.9 ; then
+    if version_ge $your_kernel_version 4.9 ; then
         green "     是"
     else
         red "     否，需升级内核"
@@ -1093,8 +1102,8 @@ setsshd()
 get_certs()
 {
     configtls_init
-    mv /etc/nginx/conf.d/v2ray.conf /etc/nginx/conf.d/v2ray.conf.bak
-cat > /etc/nginx/conf.d/v2ray.conf<<EOF
+    mv $nginx_config $nginx_config.bak
+cat > $nginx_config<<EOF
 server {
     listen 80 fastopen=100 reuseport default_server;
     listen [::]:80 fastopen=100 reuseport default_server;
@@ -1114,7 +1123,31 @@ EOF
     esac
     $HOME/.acme.sh/acme.sh --installcert -d $1 --key-file /etc/nginx/certs/$1.key --fullchain-file /etc/nginx/certs/$1.cer --reloadcmd "systemctl restart nginx" --ecc
     systemctl stop nginx
-    mv /etc/nginx/conf.d/v2ray.conf.bak /etc/nginx/conf.d/v2ray.conf
+    mv $nginx_config.bak $nginx_config
+}
+
+check_installed()
+{
+    if [ $release == ubuntu ] || [ $release == debian ]; then
+        if ! dpkg -s $1 2>&1 >/dev/null; then
+            if ! apt -y install $1; then
+                apt update
+                if ! apt -y install $1; then
+                    yellow "重要组件安装失败！！"
+                    yellow "按回车键继续或者ctrl+c退出"
+                    read -s
+                fi
+            fi
+        fi
+    else
+        if ! rpm -q $2 2>&1 >/dev/null; then
+            if ! yum -y install $2; then
+                yellow "重要组件安装失败！！"
+                yellow "按回车键继续或者ctrl+c退出"
+                read -s
+            fi
+        fi
+    fi
 }
 
 #安装程序主体
@@ -1124,24 +1157,8 @@ install_update_v2ray_ws_tls()
         setsshd
     fi
     apt -y -f install
-    if [ $release == ubuntu ] || [ $release == debian ]; then
-        if ! apt -y install ca-certificates; then
-            apt update
-            if ! apt -y install ca-certificates; then
-                yellow "重要组件安装失败！！"
-                yellow "按回车键继续或者ctrl+c退出"
-                read -s
-            fi
-        fi
-    else
-        if ! yum -y install ca-certificates; then
-            yellow "重要组件安装失败！！"
-            yellow "按回车键继续或者ctrl+c退出"
-            read -s
-        fi
-    fi
-    apt -y install lsb-release
-    yum -y install lsb-release
+    check_installed ca-certificates ca-certificates
+    check_installed lsb-release lsb_release
     #系统版本
     systemVersion=`lsb_release -r --short`
     systemctl stop nginx
@@ -1178,10 +1195,17 @@ install_update_v2ray_ws_tls()
         read -s
     fi
     ##libxml2-devel非必须
-    if [ "$release" == "ubuntu" ] && version_ge $systemVersion 20.04; then
+    if [ "$release" == "ubuntu" ] && [ "$systemVersion" == "20.04" ]; then
         apt -y install gcc-10 g++-10
         apt -y purge gcc g++ gcc-9 g++-9 gcc-8 g++-8 gcc-7 g++-7
-        apt -y install gcc-10 g++-10
+        if ! apt -y install gcc-10 g++-10; then
+            apt update
+            if ! apt -y install gcc-10 g++-10; then
+                yellow "依赖安装失败"
+                yellow "按回车键继续或者ctrl+c退出"
+                read -s
+            fi
+        fi
         apt -y autopurge
         ln -s -f /usr/bin/gcc-10                         /usr/bin/gcc
         ln -s -f /usr/bin/gcc-10                         /usr/bin/cc
@@ -1344,6 +1368,7 @@ install_update_v2ray_ws_tls()
         tyblue " 伪装域名：空"
         tyblue " 路径：${path}"
         tyblue " 底层传输安全：tls"
+        tyblue " allowInsecure：false"
         tyblue "----------------------------------------------"
     else
         echo_end_socks
@@ -1351,7 +1376,7 @@ install_update_v2ray_ws_tls()
     echo
     if [ $pretend -eq 2 ]; then
         tyblue " 如果要更换被镜像的网站"
-        tyblue " 修改/etc/nginx/conf.d/v2ray.conf"
+        tyblue " 修改$nginx_config"
         tyblue " 将v.qq.com修改为你要镜像的网站"
     fi
     echo
@@ -1399,7 +1424,7 @@ EOF
 #配置v2ray
 config_v2ray()
 {
-cat > /usr/local/etc/v2ray/05_inbounds.json <<EOF
+cat > $v2ray_config <<EOF
 {
     "inbounds": [
         {
@@ -1407,7 +1432,7 @@ cat > /usr/local/etc/v2ray/05_inbounds.json <<EOF
             "listen": "127.0.0.1",
 EOF
     if [ $protocol -eq 1 ]; then
-cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
+cat >> $v2ray_config <<EOF
             "protocol": "vless",
             "settings": {
                 "clients": [
@@ -1420,7 +1445,7 @@ cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
             },
 EOF
     elif [ $protocol -eq 2 ]; then
-cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
+cat >> $v2ray_config <<EOF
             "protocol": "vmess",
             "settings": {
                 "clients": [
@@ -1433,7 +1458,7 @@ cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
             },
 EOF
     elif [ $protocol -eq 3 ]; then
-cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
+cat >> $v2ray_config <<EOF
             "protocol": "socks",
             "settings": {
                 "auth": "noauth",
@@ -1442,7 +1467,7 @@ cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
             },
 EOF
     fi
-cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
+cat >> $v2ray_config <<EOF
             "streamSettings": {
                 "network": "ws",
                 "wsSettings": {
@@ -1453,11 +1478,7 @@ cat >> /usr/local/etc/v2ray/05_inbounds.json <<EOF
                 }
             }
         }
-    ]
-}
-EOF
-cat > /usr/local/etc/v2ray/06_outbounds.json << EOF
-{
+    ],
     "outbounds": [
         {
             "protocol": "freedom",
@@ -1476,24 +1497,24 @@ EOF
 #获取配置信息 path port v2id protocol tlsVersion
 get_base_information()
 {
-    path=`grep path /usr/local/etc/v2ray/05_inbounds.json`
+    path=`grep path $v2ray_config`
     path=${path##*' '}
     path=${path#*'"'}
     path=${path%'"'*}
-    if grep -m 1 "ssl_protocols" /etc/nginx/conf.d/v2ray.conf | grep -q "TLSv1.2" ; then
+    if grep -m 1 "ssl_protocols" $nginx_config | grep -q "TLSv1.2" ; then
         tlsVersion=1
     else
         tlsVersion=2
     fi
-    port=`grep port /usr/local/etc/v2ray/05_inbounds.json`
+    port=`grep port $v2ray_config`
     port=${port##*' '}
     port=${port%%,*}
-    if grep -q "id" /usr/local/etc/v2ray/05_inbounds.json ; then
-        v2id=`grep id /usr/local/etc/v2ray/05_inbounds.json`
+    if grep -q "id" $v2ray_config ; then
+        v2id=`grep id $v2ray_config`
         v2id=${v2id##*' '}
         v2id=${v2id#*'"'}
         v2id=${v2id%'"'*}
-        if grep -q "vless" /usr/local/etc/v2ray/05_inbounds.json; then
+        if grep -q "vless" $v2ray_config; then
             protocol=1
         else
             protocol=2
@@ -1506,19 +1527,19 @@ get_base_information()
 
 get_domainlist()
 {
-    domain_list=($(grep server_name /etc/nginx/conf.d/v2ray.conf | sed 's/;//g' | awk '{print $2}'))
+    domain_list=($(grep server_name $nginx_config | sed 's/;//g' | awk '{print $2}'))
     unset domain_list[0]
     local line
     for i in ${!domain_list[@]}
     do
-        line=`grep -n "server_name ${domain_list[i]} www.${domain_list[i]};" /etc/nginx/conf.d/v2ray.conf | tail -n 1 | awk -F : '{print $1}'`
+        line=`grep -n "server_name ${domain_list[i]} www.${domain_list[i]};" $nginx_config | tail -n 1 | awk -F : '{print $1}'`
         if [ "$line" == "" ]; then
-            line=`grep -n "server_name ${domain_list[i]};" /etc/nginx/conf.d/v2ray.conf | tail -n 1 | awk -F : '{print $1}'`
+            line=`grep -n "server_name ${domain_list[i]};" $nginx_config | tail -n 1 | awk -F : '{print $1}'`
             domainconfig_list[i]=2
         else
             domainconfig_list[i]=1
         fi
-        if awk 'NR=='"$(($line+18))"' {print $0}' /etc/nginx/conf.d/v2ray.conf | grep -q "location / {"; then
+        if awk 'NR=='"$(($line+18))"' {print $0}' $nginx_config | grep -q "location / {"; then
             pretend_list[i]=2
         else
             pretend_list[i]=1
@@ -1684,9 +1705,9 @@ start_menu()
     echo
     tyblue " --------------启动/停止-------------"
     if [ ${v2ray_status[1]} -eq 1 ] && [ ${nginx_status[1]} -eq 1 ]; then
-        tyblue "   6. 重新启动V2Ray-WebSocket+TLS+Web(对于玄学断连/掉速有奇效)"
+        tyblue "   6. 重新启动V2Ray-WebSocket+TLS+Web"
     else
-        tyblue "   6. 启动V2Ray-WebSocket+TLS+Web(对于玄学断连/掉速有奇效)"
+        tyblue "   6. 启动V2Ray-WebSocket+TLS+Web"
     fi
     tyblue "   7. 停止V2Ray-WebSocket+TLS+Web"
     echo
@@ -1740,7 +1761,7 @@ start_menu()
                 exit 1
             fi
             rm -rf "$0"
-            wget -O "$0" "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
+            wget -O "$0" "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2ray-WebSocket(ws)+TLS(1.3)+Web-setup-beta.sh"
             chmod +x "$0"
             "$0" --update
             ;;
@@ -1821,7 +1842,7 @@ start_menu()
             echo
             if [ $pretend -eq 2 ]; then
                 tyblue "如果要更换被镜像的网站"
-                tyblue "修改/etc/nginx/conf.d/v2ray.conf"
+                tyblue "修改$nginx_config"
                 tyblue "将v.qq.com修改为你要镜像的网站"
             fi
             ;;
@@ -1852,7 +1873,7 @@ start_menu()
             echo
             if [ $pretend -eq 2 ]; then
                 tyblue "如果要更换被镜像的网站"
-                tyblue "修改/etc/nginx/conf.d/v2ray.conf"
+                tyblue "修改$nginx_config"
                 tyblue "将v.qq.com修改为你要镜像的网站"
             fi
             ;;
@@ -1950,7 +1971,7 @@ start_menu()
             tyblue "---------------请输入新的path(带\"/\")---------------"
             read path
             config_v2ray
-            sed -i s#"$temp_old_path"#"$path"# /etc/nginx/conf.d/v2ray.conf
+            sed -i s#"$temp_old_path"#"$path"# $nginx_config
             systemctl restart v2ray
             systemctl restart nginx
             green "更换成功！！"
