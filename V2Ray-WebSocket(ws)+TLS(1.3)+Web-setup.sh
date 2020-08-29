@@ -243,8 +243,7 @@ EOF
             $HOME/.acme.sh/acme.sh --issue -d ${domain_list[i]} --webroot /etc/nginx/html/${domain_list[i]} -k ec-256 -ak ec-256 --ocsp
             $HOME/.acme.sh/acme.sh --issue -d ${domain_list[i]} --webroot /etc/nginx/html/${domain_list[i]} -k ec-256 -ak ec-256 --ocsp
         fi
-        sleep 1s
-    if ! $HOME/.acme.sh/acme.sh --installcert -d ${domain_list[i]} --key-file /etc/nginx/certs/${domain_list[i]}.key --fullchain-file /etc/nginx/certs/${domain_list[i]}.cer --reloadcmd "systemctl restart nginx" --ecc; then
+    if ! $HOME/.acme.sh/acme.sh --installcert -d ${domain_list[i]} --key-file /etc/nginx/certs/${domain_list[i]}.key --fullchain-file /etc/nginx/certs/${domain_list[i]}.cer --reloadcmd "sleep 1s && systemctl restart nginx" --ecc; then
         yellow "证书安装失败，请检查您的域名，确保80端口未打开并且未被占用。并在安装完成后，使用选项8修复"
         yellow "按回车键继续。。。"
         read -s
