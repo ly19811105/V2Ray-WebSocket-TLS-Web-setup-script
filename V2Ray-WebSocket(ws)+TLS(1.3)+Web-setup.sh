@@ -1,8 +1,18 @@
 #!/bin/bash
-nginx_version=nginx-1.19.2
-openssl_version=openssl-openssl-3.0.0-alpha6
+nginx_version="nginx-1.19.2"
+openssl_version="openssl-openssl-3.0.0-alpha6"
 v2ray_config="/usr/local/etc/v2ray/config.json"
 nginx_config="/etc/nginx/conf.d/v2ray.conf"
+
+unset domain_list
+unset domainconfig_list
+unset pretend_list
+protocol=""
+tlsVersion=""
+port=""
+path=""
+v2id=""
+
 latest_kernel_version=""
 
 #定义几个颜色
@@ -22,7 +32,6 @@ red()                              #姨妈红
 {
     echo -e "\033[31;1m${1}\033[0m"
 }
-
 
 if [ "$EUID" != "0" ]; then
     red "请用root用户运行此脚本！！"
@@ -92,11 +101,417 @@ else
     is_installed=0
 fi
 
-
 #版本比较函数
 version_ge()
 {
     test "$(echo "$@" | tr " " "\n" | sort -rV | head -n 1)" == "$1"
+}
+
+get_all_domains()
+{
+    unset all_domains
+    for ((i=0;i<${#domain_list[@]};i++))
+    do
+        if [ ${domainconfig_list[i]} -eq 1 ]; then
+            all_domains+=("www.${domain_list[i]}")
+            all_domains+=("${domain_list[i]}")
+        else
+            all_domains+=("${domain_list[i]}")
+        fi
+    done
+}
+
+#配置nginx
+config_nginx()
+{
+    local i
+cat > $nginx_config<<EOF
+server {
+    listen 80 fastopen=100 reuseport default_server;
+    listen [::]:80 fastopen=100 reuseport default_server;
+EOF
+    if [ ${domainconfig_list[0]} -eq 1 ]; then
+        echo "    return 301 https://www.${domain_list[0]};" >> $nginx_config
+    else
+        echo "    return 301 https://${domain_list[0]};" >> $nginx_config
+    fi
+    get_all_domains
+cat >> $nginx_config<<EOF
+}
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${all_domains[@]};
+    return 301 https://\$host\$request_uri;
+}
+server {
+    listen 443 ssl http2 fastopen=100 reuseport default_server;
+    listen [::]:443 ssl http2 fastopen=100 reuseport default_server;
+    ssl_certificate         /etc/nginx/certs/${domain_list[0]}.cer;
+    ssl_certificate_key     /etc/nginx/certs/${domain_list[0]}.key;
+EOF
+    if [ $tlsVersion -eq 1 ]; then
+cat >> $nginx_config<<EOF
+    ssl_protocols           TLSv1.3 TLSv1.2;
+    ssl_ciphers             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
+EOF
+    else
+cat >> $nginx_config<<EOF
+    ssl_protocols           TLSv1.3;
+EOF
+    fi
+    if [ ${domainconfig_list[0]} -eq 1 ]; then
+        echo "    return 301 https://www.${domain_list[0]};" >> $nginx_config
+    else
+        echo "    return 301 https://${domain_list[0]};" >> $nginx_config
+    fi
+    echo "}" >> $nginx_config
+    for ((i=0;i<${#domain_list[@]};i++))
+    do
+cat >> $nginx_config<<EOF
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+EOF
+        if [ ${domainconfig_list[i]} -eq 1 ]; then
+            echo "    server_name www.${domain_list[i]} ${domain_list[i]};" >> $nginx_config
+        else
+            echo "    server_name ${domain_list[i]};" >> $nginx_config
+        fi
+cat >> $nginx_config<<EOF
+    ssl_certificate         /etc/nginx/certs/${domain_list[i]}.cer;
+    ssl_certificate_key     /etc/nginx/certs/${domain_list[i]}.key;
+EOF
+        if [ $tlsVersion -eq 1 ]; then
+cat >> $nginx_config<<EOF
+    ssl_protocols           TLSv1.3 TLSv1.2;
+    ssl_ciphers             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
+EOF
+        else
+cat >> $nginx_config<<EOF
+    ssl_protocols           TLSv1.3;
+EOF
+        fi
+cat >> $nginx_config<<EOF
+    ssl_stapling            on;
+    ssl_stapling_verify     on;
+    ssl_trusted_certificate /etc/nginx/certs/${domain_list[i]}.cer;
+    add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload" always;
+    root /etc/nginx/html/${domain_list[i]};
+    location $path {
+        proxy_redirect off;
+        proxy_pass http://127.0.0.1:$port;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$http_host;
+    }
+EOF
+        if [ ${pretend_list[i]} -eq 2 ]; then
+cat >> $nginx_config<<EOF
+    location / {
+        proxy_pass https://v.qq.com;
+        proxy_set_header referer "https://v.qq.com";
+    }
+EOF
+        fi
+        echo "}" >> $nginx_config
+    done
+}
+
+#获取证书
+get_all_certs()
+{
+    local i
+    config_nginx_init
+    mv $nginx_config $nginx_config.bak
+    for ((i=0;i<${#domain_list[@]};i++))
+    do
+cat > $nginx_config<<EOF
+server {
+    listen 80 fastopen=100 reuseport default_server;
+    listen [::]:80 fastopen=100 reuseport default_server;
+    root /etc/nginx/html/${domain_list[i]};
+}
+EOF
+        sleep 1s
+        systemctl restart nginx
+        if [ ${domainconfig_list[i]} -eq 1 ]; then
+            $HOME/.acme.sh/acme.sh --issue -d ${domain_list[i]} -d www.${domain_list[i]} --webroot /etc/nginx/html/${domain_list[i]} -k ec-256 -ak ec-256 --ocsp
+            $HOME/.acme.sh/acme.sh --issue -d ${domain_list[i]} -d www.${domain_list[i]} --webroot /etc/nginx/html/${domain_list[i]} -k ec-256 -ak ec-256 --ocsp
+        else
+            $HOME/.acme.sh/acme.sh --issue -d ${domain_list[i]} --webroot /etc/nginx/html/${domain_list[i]} -k ec-256 -ak ec-256 --ocsp
+            $HOME/.acme.sh/acme.sh --issue -d ${domain_list[i]} --webroot /etc/nginx/html/${domain_list[i]} -k ec-256 -ak ec-256 --ocsp
+        fi
+        sleep 1s
+    if ! $HOME/.acme.sh/acme.sh --installcert -d ${domain_list[i]} --key-file /etc/nginx/certs/${domain_list[i]}.key --fullchain-file /etc/nginx/certs/${domain_list[i]}.cer --reloadcmd "systemctl restart nginx" --ecc; then
+        yellow "证书安装失败，请检查您的域名，确保80端口未打开并且未被占用。并在安装完成后，使用选项8修复"
+        yellow "按回车键继续。。。"
+        read -s
+    fi
+    done
+    systemctl stop nginx
+    mv $nginx_config.bak $nginx_config
+}
+
+#获取配置信息 path port v2id protocol tlsVersion
+get_base_information()
+{
+    path=`grep path $v2ray_config`
+    path=${path##*' '}
+    path=${path#*'"'}
+    path=${path%'"'*}
+    if grep -m 1 "ssl_protocols" $nginx_config | grep -q "TLSv1.2" ; then
+        tlsVersion=1
+    else
+        tlsVersion=2
+    fi
+    port=`grep port $v2ray_config`
+    port=${port##*' '}
+    port=${port%%,*}
+    if grep -q "id" $v2ray_config ; then
+        v2id=`grep id $v2ray_config`
+        v2id=${v2id##*' '}
+        v2id=${v2id#*'"'}
+        v2id=${v2id%'"'*}
+        if grep -q "vless" $v2ray_config; then
+            protocol=1
+        else
+            protocol=2
+        fi
+    else
+        v2id=""
+        protocol=3
+    fi
+}
+
+#获取域名列表
+get_domainlist()
+{
+    domain_list=($(grep server_name $nginx_config | sed 's/;//g' | awk '{print $NF}'))
+    unset domain_list[0]
+    domain_list=(${domain_list[@]})
+    local line
+    for i in ${!domain_list[@]}
+    do
+        line=`grep -n "server_name www.${domain_list[i]} ${domain_list[i]};" $nginx_config | tail -n 1 | awk -F : '{print $1}'`
+        if [ "$line" == "" ]; then
+            line=`grep -n "server_name ${domain_list[i]};" $nginx_config | tail -n 1 | awk -F : '{print $1}'`
+            domainconfig_list[i]=2
+        else
+            domainconfig_list[i]=1
+        fi
+        if awk 'NR=='"$(($line+18))"' {print $0}' $nginx_config | grep -q "location / {"; then
+            pretend_list[i]=2
+        else
+            pretend_list[i]=1
+        fi
+    done
+}
+
+#安装
+install_update_v2ray_ws_tls()
+{
+    check_important_dependence_installed()
+    {
+        if [ $release == ubuntu ] || [ $release == debian ]; then
+            if ! dpkg -s $1 2>&1 >/dev/null; then
+                if ! apt -y install $1; then
+                    apt update
+                    if ! apt -y install $1; then
+                        yellow "重要组件安装失败！！"
+                        yellow "按回车键继续或者ctrl+c退出"
+                        read -s
+                    fi
+                fi
+            fi
+        else
+            if ! rpm -q $2 2>&1 >/dev/null; then
+                if ! yum -y install $2; then
+                    yellow "重要组件安装失败！！"
+                    yellow "按回车键继续或者ctrl+c退出"
+                    read -s
+                fi
+            fi
+        fi
+    }
+    install_dependence()
+    {
+        if [ $release == ubuntu ] || [ $release == debian ]; then
+            if ! apt -y install $1; then
+                apt update
+                if ! apt -y install $1; then
+                    yellow "依赖安装失败！！"
+                    yellow "按回车键继续或者ctrl+c退出"
+                    read -s
+                fi
+            fi
+        else
+            if ! yum -y install $1; then
+                yellow "依赖安装失败！！"
+                yellow "按回车键继续或者ctrl+c退出"
+                read -s
+            fi
+        fi
+    }
+    if ! grep -q "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" /etc/ssh/sshd_config ; then
+        setsshd
+    fi
+    apt -y -f install
+    check_important_dependence_installed ca-certificates ca-certificates
+    check_important_dependence_installed lsb-release lsb_release
+    #系统版本
+    systemVersion=`lsb_release -r --short`
+    systemctl stop nginx
+    systemctl stop v2ray
+    uninstall_firewall
+    doupdate
+    uninstall_firewall
+    if ! grep -q "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" /etc/sysctl.conf ; then
+        echo ' ' >> /etc/sysctl.conf
+        echo "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" >> /etc/sysctl.conf
+    fi
+    if ! grep -q "net.ipv4.tcp_fastopen = 3" /etc/sysctl.conf || ! sysctl net.ipv4.tcp_fastopen | grep -q 3 ; then
+        sed -i '/net.ipv4.tcp_fastopen/d' /etc/sysctl.conf
+        echo 'net.ipv4.tcp_fastopen = 3' >> /etc/sysctl.conf
+        sysctl -p
+    fi
+    rm -rf /temp_install_update_v2ray_ws_tls
+    mkdir /temp_install_update_v2ray_ws_tls
+    cd /temp_install_update_v2ray_ws_tls
+    install_bbr
+    apt -y -f install
+    #读取域名
+    if [ $update == 0 ]; then
+        readDomain
+        readTlsConfig
+        readProtocolConfig
+    else
+        get_domainlist
+        get_base_information
+    fi
+    ##安装依赖
+    if [ $release == centos ] || [ $release == redhat ]; then
+        install_dependence "gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed perl-Data-Dumper perl-IPC-Cmd geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make openssl crontabs"
+    else
+        if [ "$release" == "ubuntu" ] && [ "$systemVersion" == "20.04" ]; then
+            install_dependence "gcc-10 g++-10"
+            apt -y purge gcc g++ gcc-9 g++-9 gcc-8 g++-8 gcc-7 g++-7
+            apt -y autopurge
+            install_dependence "gcc-10 g++-10 libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make openssl cron"
+            ln -s -f /usr/bin/gcc-10                         /usr/bin/gcc
+            ln -s -f /usr/bin/gcc-10                         /usr/bin/cc
+            ln -s -f /usr/bin/x86_64-linux-gnu-gcc-10        /usr/bin/x86_64-linux-gnu-gcc
+            ln -s -f /usr/bin/g++-10                         /usr/bin/g++
+            ln -s -f /usr/bin/g++-10                         /usr/bin/c++
+            ln -s -f /usr/bin/x86_64-linux-gnu-g++-10        /usr/bin/x86_64-linux-gnu-g++
+            ln -s -f /usr/bin/gcc-ar-10                      /usr/bin/gcc-ar
+            ln -s -f /usr/bin/x86_64-linux-gnu-gcc-ar-10     /usr/bin/x86_64-linux-gnu-gcc-ar
+            ln -s -f /usr/bin/gcc-nm-10                      /usr/bin/gcc-nm
+            ln -s -f /usr/bin/x86_64-linux-gnu-gcc-nm-10     /usr/bin/x86_64-linux-gnu-gcc-nm
+            ln -s -f /usr/bin/gcc-ranlib-10                  /usr/bin/gcc-ranlib
+            ln -s -f /usr/bin/x86_64-linux-gnu-gcc-ranlib-10 /usr/bin/x86_64-linux-gnu-gcc-ranlib
+            ln -s -f /usr/bin/cpp-10                         /usr/bin/cpp
+            ln -s -f /usr/bin/x86_64-linux-gnu-cpp-10        /usr/bin/x86_64-linux-gnu-cpp
+            ln -s -f /usr/bin/gcov-10                        /usr/bin/gcov
+            ln -s -f /usr/bin/gcov-dump-10                   /usr/bin/gcov-dump
+            ln -s -f /usr/bin/gcov-tool-10                   /usr/bin/gcov-tool
+            ln -s -f /usr/bin/x86_64-linux-gnu-gcov-10       /usr/bin/x86_64-linux-gnu-gcov
+            ln -s -f /usr/bin/x86_64-linux-gnu-gcov-dump-10  /usr/bin/x86_64-linux-gnu-gcov-dump
+            ln -s -f /usr/bin/x86_64-linux-gnu-gcov-tool-10  /usr/bin/x86_64-linux-gnu-gcov-tool
+        else
+            install_dependence "gcc g++ libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make openssl cron"
+        fi
+    fi
+    ##libxml2-devel非必须
+    apt clean
+    yum clean all
+
+##安装nginx
+    if ! wget -O ${nginx_version}.tar.gz https://nginx.org/download/${nginx_version}.tar.gz ; then
+        red    "获取nginx失败"
+        yellow "按回车键继续或者按ctrl+c终止"
+        read -s
+    fi
+    tar -zxf ${nginx_version}.tar.gz
+    if ! wget -O ${openssl_version}.tar.gz https://github.com/openssl/openssl/archive/${openssl_version#*-}.tar.gz ; then
+        red    "获取openssl失败"
+        yellow "按回车键继续或者按ctrl+c终止"
+        read -s
+    fi
+    tar -zxf ${openssl_version}.tar.gz
+    cd ${nginx_version}
+    ./configure --prefix=/etc/nginx --with-openssl=../$openssl_version --with-openssl-opt="enable-ec_nistp_64_gcc_128 shared threads zlib-dynamic sctp" --with-mail=dynamic --with-mail_ssl_module --with-stream=dynamic --with-stream_ssl_module --with-stream_realip_module --with-stream_geoip_module=dynamic --with-stream_ssl_preread_module --with-http_ssl_module --with-http_v2_module --with-http_realip_module --with-http_addition_module --with-http_xslt_module=dynamic --with-http_image_filter_module=dynamic --with-http_geoip_module=dynamic --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_slice_module --with-http_stub_status_module --with-http_perl_module=dynamic --with-pcre --with-libatomic --with-compat --with-cpp_test_module --with-google_perftools_module --with-file-aio --with-threads --with-poll_module --with-select_module --with-cc-opt="-Wno-error -g0 -O3"
+    if ! make; then
+        red    "nginx编译失败！"
+        yellow "请尝试更换系统，建议使用Ubuntu最新版系统"
+        green  "欢迎进行Bug report(https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/issues)，感谢您的支持"
+        exit 1
+    fi
+    if [ $update == 1 ]; then
+        mkdir ../domain_backup
+        for i in ${!domain_list[@]}
+        do
+            if [ ${pretend_list[i]} == 1 ]; then
+                mv /etc/nginx/html/${domain_list[i]} ../domain_backup
+            fi
+        done
+    fi
+    remove_v2ray_nginx
+    if ! make install; then
+        red    "nginx安装失败！"
+        yellow "请尝试更换系统，建议使用Ubuntu最新版系统"
+        green  "欢迎进行Bug report(https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/issues)，感谢您的支持"
+        exit 1
+    fi
+    mkdir /etc/nginx/conf.d
+    mkdir /etc/nginx/certs
+    mkdir /etc/nginx/tcmalloc_temp
+    chmod 777 /etc/nginx/tcmalloc_temp
+    cd ..
+    config_service_nginx
+##安装nignx完成
+
+#安装acme.sh
+    curl https://get.acme.sh | sh
+    $HOME/.acme.sh/acme.sh --upgrade --auto-upgrade
+
+#安装v2ray
+    if ! curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh; then
+        if ! curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh; then
+            yellow "获取V2Ray安装脚本失败"
+            yellow "按回车键继续或者按ctrl+c终止"
+            read -s
+        fi
+    fi
+    if ! bash install-release.sh; then
+        if ! bash install-release.sh; then
+            yellow "V2Ray安装失败"
+            yellow "按回车键继续或者按ctrl+c终止"
+            read -s
+        fi
+    fi
+    systemctl enable v2ray
+    systemctl stop v2ray
+    if [ $update == 0 ]; then
+        path=$(cat /dev/urandom | head -c 8 | md5sum | head -c 7)
+        path="/$path"
+        v2id=`cat /proc/sys/kernel/random/uuid`
+        get_random_port
+    fi
+    config_v2ray
+
+    get_all_certs
+    config_nginx
+    if [ $update == 1 ]; then
+        mv domain_backup/* /etc/nginx/html
+    else
+        get_webs
+    fi
+    systemctl start nginx
+    systemctl start v2ray
+    echo_end
+    rm -rf /temp_install_update_v2ray_ws_tls
 }
 
 #读取域名
@@ -114,6 +529,9 @@ readDomain()
             return 1
         fi
     }
+    local domain=""
+    local domainconfig=""
+    local pretend=""
     echo -e "\n\n\n"
     tyblue "----------------------关于域名的说明----------------------"
     tyblue " 假设你的域名是abcd.com，则:"
@@ -131,7 +549,6 @@ readDomain()
     tyblue "--------------------请选择域名解析情况--------------------"
     tyblue " 1. 一级域名和  www.一级域名  都解析到此服务器上"
     tyblue " 2. 仅一级域名或某个二(三)级域名解析到此服务器上"
-    domainconfig=""
     while [ "$domainconfig" != "1" -a "$domainconfig" != "2" ]
     do
         read -p "您的选择是：" domainconfig
@@ -162,13 +579,14 @@ readDomain()
     tyblue " 3. nextcloud登陆页面"
     green  "    说明：nextclound是开源的私人网盘服务，假装你搭建了一个私人网盘(可以换成别的自定义网站)"
     echo
-    pretend=""
     while [[ x"$pretend" != x"1" && x"$pretend" != x"2" && x"$pretend" != x"3" ]]
     do
         read -p "您的选择是：" pretend
     done
+    domain_list+=("$domain")
+    domainconfig_list+=("$domainconfig")
+    pretend_list+=("$pretend")
 }
-
 
 #选择tls配置
 readTlsConfig()
@@ -211,7 +629,7 @@ readProtocolConfig()
 }
 
 #配置nginx
-configtls_init()
+config_nginx_init()
 {
 cat > /etc/nginx/conf/nginx.conf <<EOF
 
@@ -334,156 +752,6 @@ http {
 }
 EOF
 }
-
-
-#配置nginx(重置域名配置) 参数：  domain  domainconfig  pretend
-first_domain()
-{
-    get_certs $1 $2
-cat > $nginx_config<<EOF
-server {
-    listen 80 fastopen=100 reuseport default_server;
-    listen [::]:80 fastopen=100 reuseport default_server;
-EOF
-    if [ $2 -eq 1 ]; then
-        echo "    return 301 https://www.$1;" >> $nginx_config
-    else
-        echo "    return 301 https://$1;" >> $nginx_config
-    fi
-cat >> $nginx_config<<EOF
-}
-server {
-    listen 80;
-    listen [::]:80;
-    server_name $1;
-    return 301 https://\$host\$request_uri;
-}
-server {
-    listen 443 ssl http2 fastopen=100 reuseport default_server;
-    listen [::]:443 ssl http2 fastopen=100 reuseport default_server;
-    ssl_certificate         /etc/nginx/certs/$1.cer;
-    ssl_certificate_key     /etc/nginx/certs/$1.key;
-EOF
-    if [ $tlsVersion -eq 1 ]; then
-cat >> $nginx_config<<EOF
-    ssl_protocols           TLSv1.3 TLSv1.2;
-    ssl_ciphers             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
-EOF
-    else
-cat >> $nginx_config<<EOF
-    ssl_protocols           TLSv1.3;
-EOF
-    fi
-    if [ $2 -eq 1 ]; then
-        echo "    return 301 https://www.$1;" >> $nginx_config
-    else
-        echo "    return 301 https://$1;" >> $nginx_config
-    fi
-cat >> $nginx_config<<EOF
-}
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name $1;
-    ssl_certificate         /etc/nginx/certs/$1.cer;
-    ssl_certificate_key     /etc/nginx/certs/$1.key;
-EOF
-    if [ $tlsVersion -eq 1 ]; then
-cat >> $nginx_config<<EOF
-    ssl_protocols           TLSv1.3 TLSv1.2;
-    ssl_ciphers             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
-EOF
-    else
-cat >> $nginx_config<<EOF
-    ssl_protocols           TLSv1.3;
-EOF
-    fi
-cat >> $nginx_config<<EOF
-    ssl_stapling            on;
-    ssl_stapling_verify     on;
-    ssl_trusted_certificate /etc/nginx/certs/$1.cer;
-    add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload" always;
-    root /etc/nginx/html/$1;
-    location $path {
-        proxy_redirect off;
-        proxy_pass http://127.0.0.1:$port;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$http_host;
-    }
-EOF
-    if [ $3 -eq 2 ]; then
-cat >> $nginx_config<<EOF
-    location / {
-        proxy_pass https://v.qq.com;
-        proxy_set_header referer "https://v.qq.com";
-    }
-EOF
-    fi
-    echo '}' >> $nginx_config
-    if [ $2 -eq 1 ]; then
-        sed -i "s/server_name $1/& www.$1/" $nginx_config
-    fi
-}
-
-
-#添加新域名 参数：domain domainconfig pretend
-add_domain()
-{
-    get_certs $1 $2
-    local old_domain=$(grep -m 1 "server_name" $nginx_config)
-    old_domain=${old_domain%';'*}
-cat >> $nginx_config<<EOF
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name $1;
-    ssl_certificate         /etc/nginx/certs/$1.cer;
-    ssl_certificate_key     /etc/nginx/certs/$1.key;
-EOF
-    if [ $tlsVersion -eq 1 ]; then
-cat >> $nginx_config<<EOF
-    ssl_protocols           TLSv1.3 TLSv1.2;
-    ssl_ciphers             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
-EOF
-    else
-cat >> $nginx_config<<EOF
-    ssl_protocols           TLSv1.3;
-EOF
-    fi
-cat >> $nginx_config<<EOF
-    ssl_stapling            on;
-    ssl_stapling_verify     on;
-    ssl_trusted_certificate /etc/nginx/certs/$1.cer;
-    add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload" always;
-    root /etc/nginx/html/$1;
-    location $path {
-        proxy_redirect off;
-        proxy_pass http://127.0.0.1:$port;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$http_host;
-    }
-EOF
-    if [ $3 -eq 2 ]; then
-cat >> $nginx_config<<EOF
-    location / {
-        proxy_pass https://v.qq.com;
-        proxy_set_header referer "https://v.qq.com";
-    }
-EOF
-    fi
-    echo '}' >> $nginx_config
-    if [ $2 -eq 1 ]; then
-        sed -i "0,/$old_domain/s//$old_domain $1 www.$1/" $nginx_config
-        sed -i "s/server_name $1/& www.$1/" $nginx_config
-    else
-        sed -i "0,/$old_domain/s//$old_domain $1/" $nginx_config
-    fi
-}
-
 
 #升级系统组件
 doupdate()
@@ -661,7 +929,6 @@ doupdate()
     fi
 }
 
-
 #删除防火墙和阿里云盾
 uninstall_firewall()
 {
@@ -684,7 +951,6 @@ uninstall_firewall()
     rm -rf $(find / -name *aliyun*)
     rm -rf $(find / -name *CmsGoAgent*)
 }
-
 
 #卸载v2ray和nginx
 remove_v2ray_nginx()
@@ -1067,7 +1333,6 @@ remove_other_kernel()
     green "-------------------卸载完成-------------------"
 }
 
-
 #配置sshd
 setsshd()
 {
@@ -1097,274 +1362,37 @@ setsshd()
     fi
 }
 
-
-#获取证书  参数：  doamin   domainconfig
-get_certs()
+echo_end()
 {
-    configtls_init
-    mv $nginx_config $nginx_config.bak
-cat > $nginx_config<<EOF
-server {
-    listen 80 fastopen=100 reuseport default_server;
-    listen [::]:80 fastopen=100 reuseport default_server;
-    root /etc/nginx/html/$1;
-}
-EOF
-    systemctl restart nginx
-    case "$2" in
-        1)
-            $HOME/.acme.sh/acme.sh --issue -d $1 -d www.$1 --webroot /etc/nginx/html/$1 -k ec-256 -ak ec-256 --ocsp
-            $HOME/.acme.sh/acme.sh --issue -d $1 -d www.$1 --webroot /etc/nginx/html/$1 -k ec-256 -ak ec-256 --ocsp
-            ;;
-        2)
-            $HOME/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html/$1 -k ec-256 -ak ec-256 --ocsp
-            $HOME/.acme.sh/acme.sh --issue -d $1 --webroot /etc/nginx/html/$1 -k ec-256 -ak ec-256 --ocsp
-            ;;
-    esac
-    $HOME/.acme.sh/acme.sh --installcert -d $1 --key-file /etc/nginx/certs/$1.key --fullchain-file /etc/nginx/certs/$1.cer --reloadcmd "systemctl restart nginx" --ecc
-    systemctl stop nginx
-    mv $nginx_config.bak $nginx_config
-}
-
-
-#安装程序主体
-install_update_v2ray_ws_tls()
-{
-    check_important_dependence_installed()
-    {
-        if [ $release == ubuntu ] || [ $release == debian ]; then
-            if ! dpkg -s $1 2>&1 >/dev/null; then
-                if ! apt -y install $1; then
-                    apt update
-                    if ! apt -y install $1; then
-                        yellow "重要组件安装失败！！"
-                        yellow "按回车键继续或者ctrl+c退出"
-                        read -s
-                    fi
-                fi
-            fi
-        else
-            if ! rpm -q $2 2>&1 >/dev/null; then
-                if ! yum -y install $2; then
-                    yellow "重要组件安装失败！！"
-                    yellow "按回车键继续或者ctrl+c退出"
-                    read -s
-                fi
-            fi
-        fi
-    }
-    install_dependence()
-    {
-        if [ $release == ubuntu ] || [ $release == debian ]; then
-            if ! apt -y install $1; then
-                apt update
-                if ! apt -y install $1; then
-                    yellow "依赖安装失败！！"
-                    yellow "按回车键继续或者ctrl+c退出"
-                    read -s
-                fi
-            fi
-        else
-            if ! yum -y install $1; then
-                yellow "依赖安装失败！！"
-                yellow "按回车键继续或者ctrl+c退出"
-                read -s
-            fi
-        fi
-    }
-    if ! grep -q "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" /etc/ssh/sshd_config ; then
-        setsshd
-    fi
-    apt -y -f install
-    check_important_dependence_installed ca-certificates ca-certificates
-    check_important_dependence_installed lsb-release lsb_release
-    #系统版本
-    systemVersion=`lsb_release -r --short`
-    systemctl stop nginx
-    systemctl stop v2ray
-    uninstall_firewall
-    doupdate
-    uninstall_firewall
-    if ! grep -q "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" /etc/sysctl.conf ; then
-        echo ' ' >> /etc/sysctl.conf
-        echo "#This file has been edited by v2ray-WebSocket-TLS-Web-setup-script" >> /etc/sysctl.conf
-    fi
-    if ! grep -q "net.ipv4.tcp_fastopen = 3" /etc/sysctl.conf || ! sysctl net.ipv4.tcp_fastopen | grep -q 3 ; then
-        sed -i '/net.ipv4.tcp_fastopen/d' /etc/sysctl.conf
-        echo 'net.ipv4.tcp_fastopen = 3' >> /etc/sysctl.conf
-        sysctl -p
-    fi
-    rm -rf /temp_install_update_v2ray_ws_tls
-    mkdir /temp_install_update_v2ray_ws_tls
-    cd /temp_install_update_v2ray_ws_tls
-    install_bbr
-    apt -y -f install
-    #读取域名
-    if [ $update == 0 ]; then
-        readDomain
-        readTlsConfig
-        readProtocolConfig
-    else
-        get_domainlist
-        get_base_information
-    fi
-    ##安装依赖
-    if [ $release == centos ] || [ $release == redhat ]; then
-        install_dependence "gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed perl-Data-Dumper perl-IPC-Cmd geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make openssl crontabs"
-    else
-        if [ "$release" == "ubuntu" ] && [ "$systemVersion" == "20.04" ]; then
-            install_dependence "gcc-10 g++-10"
-            apt -y purge gcc g++ gcc-9 g++-9 gcc-8 g++-8 gcc-7 g++-7
-            apt -y autopurge
-            install_dependence "gcc-10 g++-10 libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make openssl cron"
-            ln -s -f /usr/bin/gcc-10                         /usr/bin/gcc
-            ln -s -f /usr/bin/gcc-10                         /usr/bin/cc
-            ln -s -f /usr/bin/x86_64-linux-gnu-gcc-10        /usr/bin/x86_64-linux-gnu-gcc
-            ln -s -f /usr/bin/g++-10                         /usr/bin/g++
-            ln -s -f /usr/bin/g++-10                         /usr/bin/c++
-            ln -s -f /usr/bin/x86_64-linux-gnu-g++-10        /usr/bin/x86_64-linux-gnu-g++
-            ln -s -f /usr/bin/gcc-ar-10                      /usr/bin/gcc-ar
-            ln -s -f /usr/bin/x86_64-linux-gnu-gcc-ar-10     /usr/bin/x86_64-linux-gnu-gcc-ar
-            ln -s -f /usr/bin/gcc-nm-10                      /usr/bin/gcc-nm
-            ln -s -f /usr/bin/x86_64-linux-gnu-gcc-nm-10     /usr/bin/x86_64-linux-gnu-gcc-nm
-            ln -s -f /usr/bin/gcc-ranlib-10                  /usr/bin/gcc-ranlib
-            ln -s -f /usr/bin/x86_64-linux-gnu-gcc-ranlib-10 /usr/bin/x86_64-linux-gnu-gcc-ranlib
-            ln -s -f /usr/bin/cpp-10                         /usr/bin/cpp
-            ln -s -f /usr/bin/x86_64-linux-gnu-cpp-10        /usr/bin/x86_64-linux-gnu-cpp
-            ln -s -f /usr/bin/gcov-10                        /usr/bin/gcov
-            ln -s -f /usr/bin/gcov-dump-10                   /usr/bin/gcov-dump
-            ln -s -f /usr/bin/gcov-tool-10                   /usr/bin/gcov-tool
-            ln -s -f /usr/bin/x86_64-linux-gnu-gcov-10       /usr/bin/x86_64-linux-gnu-gcov
-            ln -s -f /usr/bin/x86_64-linux-gnu-gcov-dump-10  /usr/bin/x86_64-linux-gnu-gcov-dump
-            ln -s -f /usr/bin/x86_64-linux-gnu-gcov-tool-10  /usr/bin/x86_64-linux-gnu-gcov-tool
-        else
-            install_dependence "gcc g++ libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make openssl cron"
-        fi
-    fi
-    ##libxml2-devel非必须
-    apt clean
-    yum clean all
-
-##安装nginx
-    if ! wget -O ${nginx_version}.tar.gz https://nginx.org/download/${nginx_version}.tar.gz ; then
-        red    "获取nginx失败"
-        yellow "按回车键继续或者按ctrl+c终止"
-        read -s
-    fi
-    tar -zxf ${nginx_version}.tar.gz
-    if ! wget -O ${openssl_version}.tar.gz https://github.com/openssl/openssl/archive/${openssl_version#*-}.tar.gz ; then
-        red    "获取openssl失败"
-        yellow "按回车键继续或者按ctrl+c终止"
-        read -s
-    fi
-    tar -zxf ${openssl_version}.tar.gz
-    cd ${nginx_version}
-    ./configure --prefix=/etc/nginx --with-openssl=../$openssl_version --with-openssl-opt="enable-ec_nistp_64_gcc_128 shared threads zlib-dynamic sctp" --with-mail=dynamic --with-mail_ssl_module --with-stream=dynamic --with-stream_ssl_module --with-stream_realip_module --with-stream_geoip_module=dynamic --with-stream_ssl_preread_module --with-http_ssl_module --with-http_v2_module --with-http_realip_module --with-http_addition_module --with-http_xslt_module=dynamic --with-http_image_filter_module=dynamic --with-http_geoip_module=dynamic --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_slice_module --with-http_stub_status_module --with-http_perl_module=dynamic --with-pcre --with-libatomic --with-compat --with-cpp_test_module --with-google_perftools_module --with-file-aio --with-threads --with-poll_module --with-select_module --with-cc-opt="-Wno-error -g0 -O3"
-    if ! make; then
-        red    "nginx编译失败！"
-        yellow "请尝试更换系统，建议使用Ubuntu最新版系统"
-        green  "欢迎进行Bug report(https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/issues)，感谢您的支持"
-        exit 1
-    fi
-    if [ $update == 1 ]; then
-        mkdir ../domain_backup
-        for i in ${!domain_list[@]}
-        do
-            if [ ${pretend_list[i]} == 1 ]; then
-                mv /etc/nginx/html/${domain_list[i]} ../domain_backup
-            fi
-        done
-    fi
-    remove_v2ray_nginx
-    if ! make install; then
-        red    "nginx安装失败！"
-        yellow "请尝试更换系统，建议使用Ubuntu最新版系统"
-        green  "欢迎进行Bug report(https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/issues)，感谢您的支持"
-        exit 1
-    fi
-    mkdir /etc/nginx/conf.d
-    mkdir /etc/nginx/certs
-    mkdir /etc/nginx/tcmalloc_temp
-    chmod 777 /etc/nginx/tcmalloc_temp
-    cd ..
-    config_service_nginx
-##安装nignx完成
-
-#安装acme.sh
-    curl https://get.acme.sh | sh
-    $HOME/.acme.sh/acme.sh --upgrade --auto-upgrade
-
-#安装v2ray
-    if ! curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh; then
-        if ! curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh; then
-            yellow "获取V2Ray安装脚本失败"
-            yellow "按回车键继续或者按ctrl+c终止"
-            read -s
-        fi
-    fi
-    if ! bash install-release.sh; then
-        if ! bash install-release.sh; then
-            yellow "V2Ray安装失败"
-            yellow "按回车键继续或者按ctrl+c终止"
-            read -s
-        fi
-    fi
-    systemctl enable v2ray
-    systemctl stop v2ray
-    if [ $update == 0 ]; then
-        path=$(cat /dev/urandom | head -c 8 | md5sum | head -c 7)
-        path="/$path"
-        v2id=`cat /proc/sys/kernel/random/uuid`
-        get_random_port
-    fi
-    config_v2ray
-
-    if [ $update == 0 ]; then
-        first_domain $domain $domainconfig $pretend
-        if ! [ -e $HOME/.acme.sh/${domain}_ecc/fullchain.cer ]; then
-            yellow "获取证书失败，请检查您的域名，并在安装完成后，使用选项8修复"
-            yellow "按回车键继续。。。"
-            read -s
-        fi
-        get_web $domain $pretend
-    else
-        local temp=0
-        for i in ${!domain_list[@]}
-        do
-            if [ $temp -eq 0 ]; then
-                first_domain ${domain_list[i]} ${domainconfig_list[i]} ${pretend_list[i]}
-            else
-                add_domain ${domain_list[i]} ${domainconfig_list[i]} ${pretend_list[i]}
-            fi
-            ((temp++))
-        done
-        mv domain_backup/* /etc/nginx/html
-    fi
-    systemctl start nginx
-    systemctl start v2ray
-    rm -rf /temp_install_update_v2ray_ws_tls
-    if [ $update == 1 ]; then
-        green "-------------------升级完成-------------------"
-        return
-    fi
     echo -e "\n\n\n"
-    tyblue "-------------------安装完成-------------------"
+    if [ $update == 1 ]; then
+        tyblue "-------------------升级完成-------------------"
+    else
+        tyblue "-------------------安装完成-------------------"
+    fi
     if [ $protocol -ne 3 ]; then
         if [ $protocol -eq 1 ]; then
             tyblue " 服务器类型：VLESS"
         elif [ $protocol -eq 2 ]; then
             tyblue " 服务器类型：VMess"
         fi
-        if [ $domainconfig -eq 1  ]; then
-            tyblue " 地址：www.${domain}或${domain}"
+        get_all_domains
+        local temp=""
+        local i
+        for i in ${!all_domains[@]}
+        do
+            temp="$temp ${all_domains[i]}"
+        done
+        if [ ${#all_domains[@]} -eq 1 ]; then
+            tyblue " 地址：$temp"
         else
-            tyblue " 地址：${domain}"
+            tyblue " 地址：$temp (任选其一)"
         fi
         tyblue " 端口：443"
         tyblue " 用户ID：${v2id}"
         if [ $protocol -eq 2 ]; then
             tyblue " 额外ID：0"
-            tyblue " 加密方式：一般情况推荐none;若使用了cdn，推荐auto"
+            tyblue " 加密方式：使用cdn，推荐auto;不使用cdn，推荐none"
         fi
         tyblue " 传输协议：ws"
         tyblue " 伪装类型：none"
@@ -1377,16 +1405,73 @@ install_update_v2ray_ws_tls()
         echo_end_socks
     fi
     echo
-    if [ $pretend -eq 2 ]; then
-        tyblue " 如果要更换被镜像的网站"
-        tyblue " 修改$nginx_config"
-        tyblue " 将v.qq.com修改为你要镜像的网站"
-    fi
+    tyblue " 如果要更换被镜像的伪装网站"
+    tyblue " 修改$nginx_config"
+    tyblue " 将v.qq.com修改为你要镜像的网站"
     echo
     tyblue " 脚本最后更新时间：2020.08.29"
     echo
     red    " 此脚本仅供交流学习使用，请勿使用此脚本行违法之事。网络非法外之地，行非法之事，必将接受法律制裁!!!!"
     tyblue " 2019.11"
+}
+echo_end_socks()
+{
+    tyblue "将下面一段文字复制下来，保存到文本文件中"
+    tyblue "将“你的域名”四个字修改为你的其中一个域名(保留引号)，即原配置中“地址”一栏怎么填，这里就怎么填"
+    tyblue "并将文本文件重命名为config.json"
+    tyblue "然后在V2RayN/V2RayNG中，选择导入自定义配置，选择config.json"
+    yellow "---------------以下是文本---------------"
+cat <<EOF
+{
+  "log": {
+    "access": "",
+    "error": "",
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "listen": "127.0.0.1",
+      "port": 10808,
+      "protocol": "socks",
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls"]
+      },
+      "settings": {
+        "auth": "noauth",
+        "userLevel": 10,
+        "udp": true
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "socks",
+      "settings": {
+        "servers": [
+          {
+            "address": "你的域名",
+            "level": 10,
+            "port": 443
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "$path"
+        }
+      },
+      "mux": {
+        "enabled": true,
+        "concurrency": 8
+      }
+    }
+  ]
+}
+EOF
+    tyblue "----------------------------------------"
 }
 
 #获取随机端口号
@@ -1497,80 +1582,30 @@ cat >> $v2ray_config <<EOF
 EOF
 }
 
-#获取配置信息 path port v2id protocol tlsVersion
-get_base_information()
+#下载nextcloud模板，用于伪装
+get_webs()
 {
-    path=`grep path $v2ray_config`
-    path=${path##*' '}
-    path=${path#*'"'}
-    path=${path%'"'*}
-    if grep -m 1 "ssl_protocols" $nginx_config | grep -q "TLSv1.2" ; then
-        tlsVersion=1
-    else
-        tlsVersion=2
-    fi
-    port=`grep port $v2ray_config`
-    port=${port##*' '}
-    port=${port%%,*}
-    if grep -q "id" $v2ray_config ; then
-        v2id=`grep id $v2ray_config`
-        v2id=${v2id##*' '}
-        v2id=${v2id#*'"'}
-        v2id=${v2id%'"'*}
-        if grep -q "vless" $v2ray_config; then
-            protocol=1
-        else
-            protocol=2
-        fi
-    else
-        v2id=""
-        protocol=3
-    fi
-}
-
-get_domainlist()
-{
-    domain_list=($(grep server_name $nginx_config | sed 's/;//g' | awk '{print $2}'))
-    unset domain_list[0]
-    local line
-    for i in ${!domain_list[@]}
+    for ((i=0;i<${#domain_list[@]};i++))
     do
-        line=`grep -n "server_name ${domain_list[i]} www.${domain_list[i]};" $nginx_config | tail -n 1 | awk -F : '{print $1}'`
-        if [ "$line" == "" ]; then
-            line=`grep -n "server_name ${domain_list[i]};" $nginx_config | tail -n 1 | awk -F : '{print $1}'`
-            domainconfig_list[i]=2
-        else
-            domainconfig_list[i]=1
-        fi
-        if awk 'NR=='"$(($line+18))"' {print $0}' $nginx_config | grep -q "location / {"; then
-            pretend_list[i]=2
-        else
-            pretend_list[i]=1
+        rm -rf /etc/nginx/html/${domain_list[i]}
+        if [ ${pretend_list[i]} -eq 3 ]; then
+            mkdir /etc/nginx/html/${domain_list[i]}
+            if ! wget -P /etc/nginx/html/${domain_list[i]} https://github.com/kirin10000/V2ray-WebSocket-TLS-Web-setup-script/raw/master/Website-Template.zip ; then
+                red    "获取网站模板失败"
+                yellow "按回车键继续或者按ctrl+c终止"
+                read -s
+            fi
+            unzip -q -d /etc/nginx/html/${domain_list[i]} /etc/nginx/html/${domain_list[i]}/*.zip
+            rm -rf /etc/nginx/html/${domain_list[i]}/*.zip
         fi
     done
-}
-
-#下载nextcloud模板，用于伪装  参数： domain  pretend
-get_web()
-{
-    rm -rf /etc/nginx/html/$1
-    if [ $2 -eq 3 ]; then
-        mkdir /etc/nginx/html/$1
-        if ! wget -P /etc/nginx/html/$1 https://github.com/kirin10000/V2ray-WebSocket-TLS-Web-setup-script/raw/master/Website-Template.zip ; then
-            red    "获取网站模板失败"
-            yellow "按回车键继续或者按ctrl+c终止"
-            read -s
-        fi
-        unzip -q -d /etc/nginx/html/$1 /etc/nginx/html/$1/*.zip
-        rm -rf /etc/nginx/html/$1/*.zip
-    fi
 }
 
 #更换协议
 change_protocol()
 {
     get_base_information
-    old_protocol=$protocol
+    local old_protocol=$protocol
     readProtocolConfig
     if [ $old_protocol -eq $protocol ]; then
         red "协议未更换"
@@ -1588,66 +1623,6 @@ change_protocol()
     if [ $protocol -eq 3 ]; then
         echo_end_socks
     fi
-}
-
-echo_end_socks()
-{
-    tyblue "将下面一段文字复制下来，保存到文本文件中"
-    tyblue "将“你的域名”四个字修改为你的其中一个域名(保留引号)，即原配置中“地址”一栏怎么填，这里就怎么填"
-    tyblue "并将文本文件重命名为config.json"
-    tyblue "然后在V2RayN/V2RayNG中，选择导入自定义配置，选择config.json"
-    yellow "---------------以下是文本---------------"
-cat <<EOF
-{
-  "log": {
-    "access": "",
-    "error": "",
-    "loglevel": "warning"
-  },
-  "inbounds": [
-    {
-      "listen": "127.0.0.1",
-      "port": 10808,
-      "protocol": "socks",
-      "sniffing": {
-        "enabled": true,
-        "destOverride": ["http", "tls"]
-      },
-      "settings": {
-        "auth": "noauth",
-        "userLevel": 10,
-        "udp": true
-      }
-    }
-  ],
-  "outbounds": [
-    {
-      "protocol": "socks",
-      "settings": {
-        "servers": [
-          {
-            "address": "你的域名",
-            "level": 10,
-            "port": 443
-          }
-        ]
-      },
-      "streamSettings": {
-        "network": "ws",
-        "security": "tls",
-        "wsSettings": {
-          "path": "$path"
-        }
-      },
-      "mux": {
-        "enabled": true,
-        "concurrency": 8
-      }
-    }
-  ]
-}
-EOF
-    tyblue "----------------------------------------"
 }
 
 #开始菜单
@@ -1734,270 +1709,214 @@ start_menu()
     do
         read -p "您的选择是：" choice
     done
-    case "$choice" in
-        1)
-            if [ $is_installed == 1 ]; then
-                yellow "将卸载现有V2Ray-WebSocket+TLS+Web，并重新安装"
-                choice=""
-                while [ "$choice" != "y" ] && [ "$choice" != "n" ]
-                do
-                    tyblue "是否继续？(y/n)"
-                    read choice
-                done
-                if [ $choice == n ]; then
-                    exit 0
-                fi
-            fi
-            install_update_v2ray_ws_tls
-            ;;
-        2)
-            if [ $is_installed == 1 ]; then
-                if [ $release == ubuntu ]; then
-                    yellow "升级bbr/系统可能需要重启，重启后请再次选择'升级V2Ray-WebSocket+TLS+Web'"
-                else
-                    yellow "升级bbr可能需要重启，重启后请再次选择'升级V2Ray-WebSocket+TLS+Web'"
-                fi
-                yellow "按回车键继续，或者ctrl+c中止"
-                read -s
-            else
-                red "请先安装V2Ray-WebSocket+TLS+Web！！"
-                exit 1
-            fi
-            rm -rf "$0"
-            wget -O "$0" "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
-            chmod +x "$0"
-            "$0" --update
-            ;;
-        3)
-            apt -y -f install
-            rm -rf /temp_install_update_v2ray_ws_tls
-            mkdir /temp_install_update_v2ray_ws_tls
-            cd /temp_install_update_v2ray_ws_tls
-            install_bbr
-            rm -rf /temp_install_update_v2ray_ws_tls
-            ;;
-        4)
-            rm -rf /temp_install_update_v2ray_ws_tls
-            mkdir /temp_install_update_v2ray_ws_tls
-            cd /temp_install_update_v2ray_ws_tls
-            if ! curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh; then
-                yellow "获取V2Ray安装脚本失败"
-            fi
-            if ! bash install-release.sh; then
-                yellow "v2ray更新失败"
-            fi
-            green "----------------升级完成----------------"
-            rm -rf /temp_install_update_v2ray_ws_tls
-            ;;
-        5)
+    if [ $choice -eq 1 ]; then
+        if [ $is_installed == 1 ]; then
+            yellow "将卸载现有V2Ray-WebSocket+TLS+Web，并重新安装"
             choice=""
-            while [ "$choice" != "y" -a "$choice" != "n" ]
+            while [ "$choice" != "y" ] && [ "$choice" != "n" ]
             do
-                yellow "删除V2Ray-WebSocket(ws)+TLS(1.3)+Web?(y/n)"
+                tyblue "是否继续？(y/n)"
                 read choice
             done
-            if [ "$choice" == "n" ]; then
+            if [ $choice == n ]; then
                 exit 0
             fi
-            remove_v2ray_nginx
-            green  "----------------V2ray-WebSocket+TLS+Web已删除----------------"
-            ;;
-        6)
-            systemctl restart nginx
-            systemctl restart v2ray
-            if [ ${v2ray_status[1]} -eq 1 ] && [ ${nginx_status[1]} -eq 1 ]; then
-                green "--------------------------重启完成--------------------------"
+        fi
+        install_update_v2ray_ws_tls
+    elif [ $choice -eq 2 ]; then
+        if [ $is_installed == 1 ]; then
+            if [ $release == ubuntu ]; then
+                yellow "升级bbr/系统可能需要重启，重启后请再次选择'升级V2Ray-WebSocket+TLS+Web'"
             else
-                green "----------------V2ray-WebSocket+TLS+Web已启动---------------"
+                yellow "升级bbr可能需要重启，重启后请再次选择'升级V2Ray-WebSocket+TLS+Web'"
             fi
-            ;;
-        7)
-            systemctl stop nginx
-            systemctl stop v2ray
-            green  "----------------V2ray-WebSocket+TLS+Web已停止----------------"
-            ;;
-        8)
-            if [ $is_installed == 0 ] ; then
-                red "请先安装V2Ray-WebSocket+TLS+Web！！"
-                exit 1
-            fi
-            get_base_information
-            readDomain
-            readTlsConfig
-            first_domain $domain $domainconfig $pretend
-            if ! [ -e $HOME/.acme.sh/${domain}_ecc/fullchain.cer ]; then
-                red "获取证书失败，请检查："
-                yellow "1.域名是否正确解析"
-                yellow "2.服务器防火墙的80端口是否打开"
-                exit 1
-            fi
-            get_web $domain $pretend
-            systemctl start nginx
-            green "重置域名完成！！"
-            case "$domainconfig" in
-                1)
-                    green "服务器地址请填写www.${domain} 或 $domain"
-                    ;;
-                2)
-                    green "服务器地址请填写$domain"
-                    ;;
-            esac
-            echo
-            if [ $pretend -eq 2 ]; then
-                tyblue "如果要更换被镜像的网站"
-                tyblue "修改$nginx_config"
-                tyblue "将v.qq.com修改为你要镜像的网站"
-            fi
-            ;;
-        9)
-            if [ $is_installed == 0 ] ; then
-                red "请先安装V2Ray-WebSocket+TLS+Web！！"
-                exit 1
-            fi
-            readDomain
-            get_base_information
-            add_domain $domain $domainconfig $pretend
-            if ! [ -e $HOME/.acme.sh/${domain}_ecc/fullchain.cer ]; then
-                yellow "获取证书失败，请检查您的域名，并在安装完成后，使用选项8修复"
-                yellow "按回车键继续。。。"
-                read -s
-            fi
-            get_web $domain $pretend
-            green "添加域名完成！！"
-            systemctl start nginx
-            case "$domainconfig" in
-                1)
-                    green "现在服务器地址可以填写原来的域名和www.${domain} ${domain}"
-                    ;;
-                2)
-                    green "现在服务器地址可以填写原来的域名和${domain}"
-                    ;;
-            esac
-            echo
-            if [ $pretend -eq 2 ]; then
-                tyblue "如果要更换被镜像的网站"
-                tyblue "修改$nginx_config"
-                tyblue "将v.qq.com修改为你要镜像的网站"
-            fi
-            ;;
-        10)
-            if [ $is_installed == 0 ] ; then
-                red "请先安装V2Ray-WebSocket+TLS+Web！！"
-                exit 1
-            fi
-            get_domainlist
-            if [ ${#domain_list[@]} -le 1 ]; then
-                red "只有一个域名"
-                exit 1
-            fi
-            tyblue "-----------------------请选择要删除的域名-----------------------"
-            for i in ${!domain_list[@]}
-            do
-                if [ $domainconfig_list[i] == 1 ]; then
-                    tyblue " ${i}. ${domain_list[i]} www.${domain_list[i]}"
-                else
-                    tyblue " ${i}. ${domain_list[i]}"
-                fi
-            done
-            local delete=""
-            while ! [[ $delete =~ ^[1-9][0-9]{0,}$ ]] || [ $delete -gt ${#domain_list[@]} ]
-            do
-                read -p "你的选择是：" delete
-            done
-            rm -rf /etc/nginx/html/${domain_list[$delete]}
-            unset domain_list[$delete]
-            get_base_information
-            local temp=0
-            for i in ${!domain_list[@]}
-            do
-                if [ $temp -eq 0 ]; then
-                    first_domain ${domain_list[i]} ${domainconfig_list[i]} ${pretend_list[i]}
-                else
-                    add_domain ${domain_list[i]} ${domainconfig_list[i]} ${pretend_list[i]}
-                fi
-                ((temp++))
-            done
-            systemctl start nginx
-            green "-------删除域名完成-------"
-            ;;
-        11)
-            if [ $is_installed == 0 ] ; then
-                red "请先安装V2Ray-WebSocket+TLS+Web！！"
-                exit 1
-            fi
-            change_protocol
-            ;;
-        12)
-            if [ $is_installed == 0 ] ; then
-                red "请先安装V2Ray-WebSocket+TLS+Web！！"
-                exit 1
-            fi
-            get_base_information
-            if [ $protocol -eq 3 ] ; then
-                red "socks模式没有ID！！"
-                exit 1
-            fi
-            tyblue "您现在的ID是：$v2id"
-            choice=""
-            while [ "$choice" != "y" -a "$choice" != "n" ]
-            do
-                tyblue "是否要继续?(y/n)"
-                read choice
-            done
-            if [ $choice == "n" ]; then
-                exit 0;
-            fi
-            tyblue "-------------请输入新的ID-------------"
-            read v2id
-            config_v2ray
-            systemctl restart v2ray
-            green "更换成功！！"
-            green "新ID：$v2id"
-            ;;
-        13)
-            if [ $is_installed == 0 ] ; then
-                red "请先安装V2Ray-WebSocket+TLS+Web！！"
-                exit 1
-            fi
-            get_base_information
-            tyblue "您现在的path是：$path"
-            choice=""
-            while [ "$choice" != "y" -a "$choice" != "n" ]
-            do
-                tyblue "是否要继续?(y/n)"
-                read choice
-            done
-            if [ $choice == "n" ]; then
-                exit 0
-            fi
-            local temp_old_path="$path"
-            tyblue "---------------请输入新的path(带\"/\")---------------"
-            read path
-            config_v2ray
-            sed -i s#"$temp_old_path"#"$path"# $nginx_config
-            systemctl restart v2ray
-            systemctl restart nginx
-            green "更换成功！！"
-            green "新path：$path"
-            ;;
-        14)
-            echo
-            yellow "尝试修复退格键异常问题，退格键正常请不要修复"
-            yellow "按回车键继续或按Ctrl+c退出"
+            yellow "按回车键继续，或者ctrl+c中止"
             read -s
-            if stty -a | grep -q 'erase = ^?' ; then
-                stty erase '^H'
-            elif stty -a | grep -q 'erase = ^H' ; then
-                stty erase '^?'
+        else
+            red "请先安装V2Ray-WebSocket+TLS+Web！！"
+            exit 1
+        fi
+        rm -rf "$0"
+        wget -O "$0" "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
+        chmod +x "$0"
+        "$0" --update
+    elif [ $choice -eq 3 ]; then
+        apt -y -f install
+        rm -rf /temp_install_update_v2ray_ws_tls
+        mkdir /temp_install_update_v2ray_ws_tls
+        cd /temp_install_update_v2ray_ws_tls
+        install_bbr
+        rm -rf /temp_install_update_v2ray_ws_tls
+    elif [ $choice -eq 4 ]; then
+        rm -rf /temp_install_update_v2ray_ws_tls
+        mkdir /temp_install_update_v2ray_ws_tls
+        cd /temp_install_update_v2ray_ws_tls
+        if ! curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh; then
+            yellow "获取V2Ray安装脚本失败"
+        fi
+        if ! bash install-release.sh; then
+                yellow "v2ray更新失败"
+        fi
+        green "----------------升级完成----------------"
+        rm -rf /temp_install_update_v2ray_ws_tls
+    elif [ $choice -eq 5 ]; then
+        choice=""
+        while [ "$choice" != "y" -a "$choice" != "n" ]
+        do
+            yellow "删除V2Ray-WebSocket(ws)+TLS(1.3)+Web?(y/n)"
+            read choice
+        done
+        if [ "$choice" == "n" ]; then
+            exit 0
+        fi
+        remove_v2ray_nginx
+        green  "----------------V2ray-WebSocket+TLS+Web已删除----------------"
+    elif [ $choice -eq 6 ]; then
+        systemctl restart nginx
+        systemctl restart v2ray
+        if [ ${v2ray_status[1]} -eq 1 ] && [ ${nginx_status[1]} -eq 1 ]; then
+            green "--------------------------重启完成--------------------------"
+        else
+            green "----------------V2ray-WebSocket+TLS+Web已启动---------------"
+        fi
+    elif [ $choice -eq 7 ]; then
+        systemctl stop nginx
+        systemctl stop v2ray
+        green  "----------------V2ray-WebSocket+TLS+Web已停止----------------"
+    elif [ $choice -eq 8 ]; then
+        if [ $is_installed == 0 ] ; then
+            red "请先安装V2Ray-WebSocket+TLS+Web！！"
+            exit 1
+        fi
+        readDomain
+        readTlsConfig
+        get_base_information
+        get_all_certs
+        get_webs
+        config_nginx
+        systemctl start nginx
+        echo_end
+    elif [ $choice -eq 9 ]; then
+        if [ $is_installed == 0 ] ; then
+            red "请先安装V2Ray-WebSocket+TLS+Web！！"
+            exit 1
+        fi
+        get_base_information
+        get_domainlist
+        readDomain
+        get_all_certs
+        get_webs
+        config_nginx
+        systemctl start nginx
+        echo_end
+    elif [ $choice -eq 10 ]; then
+        if [ $is_installed == 0 ] ; then
+            red "请先安装V2Ray-WebSocket+TLS+Web！！"
+            exit 1
+        fi
+        get_domainlist
+        if [ ${#domain_list[@]} -le 1 ]; then
+            red "只有一个域名"
+            exit 1
+        fi
+        tyblue "-----------------------请选择要删除的域名-----------------------"
+        for i in ${!domain_list[@]}
+        do
+            if [ $domainconfig_list[i] == 1 ]; then
+                tyblue " ${i}. ${domain_list[i]} www.${domain_list[i]}"
+            else
+                tyblue " ${i}. ${domain_list[i]}"
             fi
-            green "修复完成！！"
-            sleep 1s
-            start_menu
-            ;;
-        15)
-            change_dns
-            ;;
-    esac
+        done
+        local delete=""
+        while ! [[ $delete =~ ^[1-9][0-9]{0,}|0$ ]] || [ $delete -ge ${#domain_list[@]} ]
+        do
+            read -p "你的选择是：" delete
+        done
+        rm -rf /etc/nginx/html/${domain_list[$delete]}
+        unset domain_list[$delete]
+        unset domainconfig_list[$delete]
+        unset pretend_list[$delete]
+        domain_list=(${domain_list[@]})
+        domainconfig_list=(${domainconfig_list[@]})
+        pretend_list=(${pretend_list[@]})
+        get_base_information
+        config_nginx
+        systemctl restart nginx
+        green "-------删除域名完成-------"
+    elif [ $choice -eq 11 ]; then
+        if [ $is_installed == 0 ] ; then
+            red "请先安装V2Ray-WebSocket+TLS+Web！！"
+            exit 1
+        fi
+        change_protocol
+    elif [ $choice -eq 12 ]; then
+        if [ $is_installed == 0 ] ; then
+            red "请先安装V2Ray-WebSocket+TLS+Web！！"
+            exit 1
+        fi
+        get_base_information
+        if [ $protocol -eq 3 ] ; then
+            red "socks模式没有ID！！"
+            exit 1
+        fi
+        tyblue "您现在的ID是：$v2id"
+        choice=""
+        while [ "$choice" != "y" -a "$choice" != "n" ]
+        do
+            tyblue "是否要继续?(y/n)"
+            read choice
+        done
+        if [ $choice == "n" ]; then
+            exit 0;
+        fi
+        tyblue "-------------请输入新的ID-------------"
+        read v2id
+        config_v2ray
+        systemctl restart v2ray
+        green "更换成功！！"
+        green "新ID：$v2id"
+    elif [ $choice -eq 13 ]; then
+        if [ $is_installed == 0 ] ; then
+            red "请先安装V2Ray-WebSocket+TLS+Web！！"
+            exit 1
+        fi
+        get_base_information
+        tyblue "您现在的path是：$path"
+        choice=""
+        while [ "$choice" != "y" -a "$choice" != "n" ]
+        do
+            tyblue "是否要继续?(y/n)"
+            read choice
+        done
+        if [ $choice == "n" ]; then
+                exit 0
+        fi
+        local temp_old_path="$path"
+        tyblue "---------------请输入新的path(带\"/\")---------------"
+        read path
+        config_v2ray
+        sed -i s#"$temp_old_path"#"$path"# $nginx_config
+        systemctl restart v2ray
+        systemctl restart nginx
+        green "更换成功！！"
+        green "新path：$path"
+    elif [ $choice -eq 14 ]; then
+        echo
+        yellow "尝试修复退格键异常问题，退格键正常请不要修复"
+        yellow "按回车键继续或按Ctrl+c退出"
+        read -s
+        if stty -a | grep -q 'erase = ^?' ; then
+            stty erase '^H'
+        elif stty -a | grep -q 'erase = ^H' ; then
+            stty erase '^?'
+        fi
+        green "修复完成！！"
+        sleep 1s
+        start_menu
+    elif [ $choice -eq 15 ]; then
+        change_dns
+    fi
 }
 
 #修改dns
