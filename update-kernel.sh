@@ -63,60 +63,6 @@ get_hint(){
     eval echo "\$hint_${new_val}"
 }
 
-#Display Memu
-display_menu(){
-    local soft=${1}
-    local default=${2}
-    eval local arr=(\${${soft}_arr[@]})
-    local default_prompt
-    if [[ "$default" != "" ]]; then
-        if [[ "$default" == "last" ]]; then
-            default=${#arr[@]}
-        fi
-        default_prompt="(default ${arr[$default-1]})"
-    fi
-    local pick
-    local hint
-    local vname
-    local prompt="which ${soft} you'd select ${default_prompt}: "
-
-    while :
-    do
-        #echo -e "\n------------ ${soft} setting ------------\n"
-        for ((i=1;i<=${#arr[@]};i++ )); do
-            vname="$(get_valid_valname ${arr[$i-1]})"
-            hint="$(get_hint $vname)"
-            [[ "$hint" == "" ]] && hint="${arr[$i-1]}"
-            #echo -e "${green}${i}${plain}) $hint"
-        done
-        echo
-        #read -p "${prompt}" pick
-        pick=${#arr[@]}
-        if [[ "$pick" == "" && "$default" != "" ]]; then
-            pick=${default}
-            break
-        fi
-
-        if ! is_digit "$pick"; then
-            prompt="Input error, please input a number"
-            continue
-        fi
-
-        if [[ "$pick" -lt 1 || "$pick" -gt ${#arr[@]} ]]; then
-            prompt="Input error, please input a number between 1 and ${#arr[@]}: "
-            continue
-        fi
-
-        break
-    done
-
-    eval ${soft}=${arr[$pick-1]}
-    vname="$(get_valid_valname ${arr[$pick-1]})"
-    hint="$(get_hint $vname)"
-    [[ "$hint" == "" ]] && hint="${arr[$pick-1]}"
-    echo -e "\nyour selection: $hint\n"
-}
-
 version_ge(){
     test "$(echo "$@" | tr " " "\n" | sort -rV | head -n 1)" == "$1"
 }
@@ -136,7 +82,12 @@ failed_version()
 }
 get_kernel_list()
 {
-    local kernel_list_temp=($(wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/ | awk -F'\"v' '/v[0-9]/{print $2}' | cut -d '"' -f1 | cut -d '/' -f1 | sort -rV))
+    echo "getting the latest kernel version....(timeout 60)"
+    local kernel_list_temp=($(timeout 60 wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/ | awk -F'\"v' '/v[0-9]/{print $2}' | cut -d '"' -f1 | cut -d '/' -f1 | sort -rV))
+    if [ ${#kernel_list_temp[@]} -le 1 ]; then
+        echo "failed to get the latest kernel version"
+        exit 1
+    fi
     local i=0
     local i2=0
     local i3=0
