@@ -987,9 +987,14 @@ remove_v2ray_nginx()
 #获取内核信息
 get_kernel_info()
 {
-    green "正在获取最新版本内核版本号。。。。"
+    green "正在获取最新版本内核版本号。。。。(60内秒未获取成功自动跳过)"
     local kernel_list
-    local kernel_list_temp=($(wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/ | awk -F'\"v' '/v[0-9]/{print $2}' | cut -d '"' -f1 | cut -d '/' -f1 | sort -rV))
+    local kernel_list_temp=($(timeout 60 wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/ | awk -F'\"v' '/v[0-9]/{print $2}' | cut -d '"' -f1 | cut -d '/' -f1 | sort -rV))
+    if [ ${#kernel_list_temp[@]} -le 1 ]; then
+        latest_kernel_version="error"
+        your_kernel_version=`uname -r | cut -d - -f 1`
+        return 1
+    fi
     local i=0
     local i2=0
     local i3=0
