@@ -287,10 +287,11 @@ get_base_information()
 #获取域名列表
 get_domainlist()
 {
-    domain_list=($(grep server_name $nginx_config | sed 's/;//g' | awk '{print $NF}'))
-    unset domain_list[0]
-    domain_list=(${domain_list[@]})
+    local domain_total=$(($(grep "server_name" $nginx_config | wc -l)-1))
+    unset domain_list
+    domain_list=($(grep server_name $nginx_config | sed 's/;//g' | tail -n $domain_total  | awk '{print $NF}'))
     local line
+    local i
     for i in ${!domain_list[@]}
     do
         line=`grep -n "server_name www.${domain_list[i]} ${domain_list[i]};" $nginx_config | tail -n 1 | awk -F : '{print $1}'`
@@ -392,6 +393,7 @@ install_update_v2ray_ws_tls()
     ##安装依赖
     if [ $release == centos ] || [ $release == redhat ]; then
         install_dependence "gperftools-devel libatomic_ops-devel pcre-devel zlib-devel libxslt-devel gd-devel perl-ExtUtils-Embed perl-Data-Dumper perl-IPC-Cmd geoip-devel lksctp-tools-devel libxml2-devel gcc gcc-c++ wget unzip curl make openssl crontabs"
+        ##libxml2-devel非必须
     else
         if [ "$release" == "ubuntu" ] && [ "$systemVersion" == "20.04" ]; then
             install_dependence "gcc-10 g++-10"
@@ -420,9 +422,9 @@ install_update_v2ray_ws_tls()
             ln -s -f /usr/bin/x86_64-linux-gnu-gcov-tool-10  /usr/bin/x86_64-linux-gnu-gcov-tool
         else
             install_dependence "gcc g++ libgoogle-perftools-dev libatomic-ops-dev libperl-dev libxslt-dev zlib1g-dev libpcre3-dev libgeoip-dev libgd-dev libxml2-dev libsctp-dev wget unzip curl make openssl cron"
+            ##libxml2-dev非必须
         fi
     fi
-    ##libxml2-devel非必须
     apt clean
     yum clean all
 
@@ -471,10 +473,6 @@ install_update_v2ray_ws_tls()
     config_service_nginx
 ##安装nignx完成
 
-#安装acme.sh
-    curl https://get.acme.sh | sh
-    $HOME/.acme.sh/acme.sh --upgrade --auto-upgrade
-
 #安装v2ray
     if ! curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh; then
         if ! curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh; then
@@ -492,6 +490,12 @@ install_update_v2ray_ws_tls()
     fi
     systemctl enable v2ray
     systemctl stop v2ray
+
+#安装acme.sh获取证书
+    curl https://get.acme.sh | sh
+    $HOME/.acme.sh/acme.sh --upgrade --auto-upgrade
+    get_all_certs
+
     if [ $update == 0 ]; then
         path=$(cat /dev/urandom | head -c 8 | md5sum | head -c 7)
         path="/$path"
@@ -499,16 +503,21 @@ install_update_v2ray_ws_tls()
         get_random_port
     fi
     config_v2ray
-
-    get_all_certs
     config_nginx
     if [ $update == 1 ]; then
         mv domain_backup/* /etc/nginx/html
     else
         get_webs
     fi
+    sleep 1s
     systemctl start nginx
+    sleep 1s
     systemctl start v2ray
+    if [ $update == 1 ]; then
+        green "-------------------升级完成-------------------"
+    else
+        green "-------------------安装完成-------------------"
+    fi
     echo_end
     rm -rf /temp_install_update_v2ray_ws_tls
 }
@@ -615,10 +624,10 @@ readProtocolConfig()
     tyblue "---------------------请选择V2Ray要使用协议---------------------"
     tyblue " 1. VLESS(新协议)"
     tyblue " 2. VMess"
-    tyblue " 3. socks(5)"
+    red    " 3. socks(5)(不推荐)"
     echo
-    green "不使用cdn推荐VLESS，cdn推荐使用VMess"
-    yellow "VLESS需要V2RayN客户端版本>=3.21，V2RayNG客户端版本>=1.3.0，V2Ray版本>=4.27.0"
+    green  "不使用cdn推荐VLESS，cdn推荐使用VMess"
+    yellow "VLESS需要V2RayN客户端版本>=3.21，V2RayNG客户端版本>=1.3.0"
     echo
     protocol=""
     while [[ "$protocol" != "1" && "$protocol" != "2" && "$protocol" != "3" ]]
@@ -1364,11 +1373,7 @@ setsshd()
 echo_end()
 {
     echo -e "\n\n\n"
-    if [ $update == 1 ]; then
-        tyblue "-------------------升级完成-------------------"
-    else
-        tyblue "-------------------安装完成-------------------"
-    fi
+    tyblue "----------V2Ray-WebSocket+TLS+Web----------"
     if [ $protocol -ne 3 ]; then
         if [ $protocol -eq 1 ]; then
             tyblue " 服务器类型：VLESS"
@@ -1392,6 +1397,8 @@ echo_end()
         if [ $protocol -eq 2 ]; then
             tyblue " 额外ID：0"
             tyblue " 加密方式：使用cdn，推荐auto;不使用cdn，推荐none"
+        else
+            tyblue " 加密方式：none"
         fi
         tyblue " 传输协议：ws"
         tyblue " 伪装类型：none"
@@ -1399,7 +1406,7 @@ echo_end()
         tyblue " 路径：${path}"
         tyblue " 底层传输安全：tls"
         tyblue " allowInsecure：false"
-        tyblue "----------------------------------------------"
+        tyblue "---------------------------------------"
     else
         echo_end_socks
     fi
@@ -1689,22 +1696,23 @@ start_menu()
     tyblue "   7. 停止V2Ray-WebSocket+TLS+Web"
     echo
     tyblue " ----------------管理----------------"
-    tyblue "   8. 重置域名和TLS配置"
+    tyblue "   8. 查看配置信息"
+    tyblue "   9. 重置域名和TLS配置"
     tyblue "      (会覆盖原有域名配置，安装过程中域名输错了造成V2Ray无法启动可以用此选项修复)"
-    tyblue "   9. 添加域名"
-    tyblue "  10. 删除域名"
-    tyblue "  11. 修改V2Ray底层传输协议"
-    tyblue "  12. 查看/修改用户ID(id)"
-    tyblue "  13. 查看/修改路径(path)"
+    tyblue "  10. 添加域名"
+    tyblue "  11. 删除域名"
+    tyblue "  12. 修改用户ID(id)"
+    tyblue "  13. 修改路径(path)"
+    tyblue "  14. 修改V2Ray底层传输协议"
     echo
     tyblue " ----------------其它----------------"
-    tyblue "  14. 尝试修复退格键无法使用的问题"
-    tyblue "  15. 修改dns"
-    yellow "  16. 退出脚本"
+    tyblue "  15. 尝试修复退格键无法使用的问题"
+    tyblue "  16. 修改dns"
+    yellow "  17. 退出脚本"
     echo
     echo
     choice=""
-    while [[ "$choice" != "1" && "$choice" != "2" && "$choice" != "3" && "$choice" != "4" && "$choice" != "5" && "$choice" != "6" && "$choice" != "7" && "$choice" != "8" && "$choice" != "9" && "$choice" != "10" && "$choice" != "11" && "$choice" != "12" && "$choice" != "13" && "$choice" != "14" && "$choice" != "15" && "$choice" != "16" ]]
+    while [[ "$choice" != "1" && "$choice" != "2" && "$choice" != "3" && "$choice" != "4" && "$choice" != "5" && "$choice" != "6" && "$choice" != "7" && "$choice" != "8" && "$choice" != "9" && "$choice" != "10" && "$choice" != "11" && "$choice" != "12" && "$choice" != "13" && "$choice" != "14" && "$choice" != "15" && "$choice" != "16" && "$choice" != "17" ]]
     do
         read -p "您的选择是：" choice
     done
@@ -1754,7 +1762,7 @@ start_menu()
             yellow "获取V2Ray安装脚本失败"
         fi
         if ! bash install-release.sh; then
-                yellow "v2ray更新失败"
+                yellow "V2Ray更新失败"
         fi
         green "----------------升级完成----------------"
         rm -rf /temp_install_update_v2ray_ws_tls
@@ -1769,20 +1777,24 @@ start_menu()
             exit 0
         fi
         remove_v2ray_nginx
-        green  "----------------V2ray-WebSocket+TLS+Web已删除----------------"
+        green  "----------------V2Ray-WebSocket+TLS+Web已删除----------------"
     elif [ $choice -eq 6 ]; then
         systemctl restart nginx
         systemctl restart v2ray
         if [ ${v2ray_status[1]} -eq 1 ] && [ ${nginx_status[1]} -eq 1 ]; then
             green "--------------------------重启完成--------------------------"
         else
-            green "----------------V2ray-WebSocket+TLS+Web已启动---------------"
+            green "----------------V2Ray-WebSocket+TLS+Web已启动---------------"
         fi
     elif [ $choice -eq 7 ]; then
         systemctl stop nginx
         systemctl stop v2ray
-        green  "----------------V2ray-WebSocket+TLS+Web已停止----------------"
+        green  "----------------V2Ray-WebSocket+TLS+Web已停止----------------"
     elif [ $choice -eq 8 ]; then
+        get_base_information
+        get_domainlist
+        echo_end
+    elif [ $choice -eq 9 ]; then
         if [ $is_installed == 0 ] ; then
             red "请先安装V2Ray-WebSocket+TLS+Web！！"
             exit 1
@@ -1793,9 +1805,11 @@ start_menu()
         get_all_certs
         get_webs
         config_nginx
+        sleep 1s
         systemctl start nginx
+        green "-------域名重置完成-------"
         echo_end
-    elif [ $choice -eq 9 ]; then
+    elif [ $choice -eq 10 ]; then
         if [ $is_installed == 0 ] ; then
             red "请先安装V2Ray-WebSocket+TLS+Web！！"
             exit 1
@@ -1806,9 +1820,11 @@ start_menu()
         get_all_certs
         get_webs
         config_nginx
+        sleep 1s
         systemctl start nginx
+        green "-------域名添加完成-------"
         echo_end
-    elif [ $choice -eq 10 ]; then
+    elif [ $choice -eq 11 ]; then
         if [ $is_installed == 0 ] ; then
             red "请先安装V2Ray-WebSocket+TLS+Web！！"
             exit 1
@@ -1821,17 +1837,21 @@ start_menu()
         tyblue "-----------------------请选择要删除的域名-----------------------"
         for i in ${!domain_list[@]}
         do
-            if [ $domainconfig_list[i] == 1 ]; then
-                tyblue " ${i}. ${domain_list[i]} www.${domain_list[i]}"
+            if [ ${domainconfig_list[i]} -eq 1 ]; then
+                tyblue " ${i}. www.${domain_list[i]} ${domain_list[i]}"
             else
                 tyblue " ${i}. ${domain_list[i]}"
             fi
         done
+        yellow " ${#domain_list[@]}. 不删除"
         local delete=""
-        while ! [[ $delete =~ ^[1-9][0-9]{0,}|0$ ]] || [ $delete -ge ${#domain_list[@]} ]
+        while ! [[ $delete =~ ^[1-9][0-9]{0,}|0$ ]] || [ $delete -gt ${#domain_list[@]} ]
         do
             read -p "你的选择是：" delete
         done
+        if [ $delete -eq ${#domain_list[@]} ]; then
+            exit 0
+        fi
         rm -rf /etc/nginx/html/${domain_list[$delete]}
         unset domain_list[$delete]
         unset domainconfig_list[$delete]
@@ -1843,12 +1863,7 @@ start_menu()
         config_nginx
         systemctl restart nginx
         green "-------删除域名完成-------"
-    elif [ $choice -eq 11 ]; then
-        if [ $is_installed == 0 ] ; then
-            red "请先安装V2Ray-WebSocket+TLS+Web！！"
-            exit 1
-        fi
-        change_protocol
+        echo_end
     elif [ $choice -eq 12 ]; then
         if [ $is_installed == 0 ] ; then
             red "请先安装V2Ray-WebSocket+TLS+Web！！"
@@ -1901,6 +1916,12 @@ start_menu()
         green "更换成功！！"
         green "新path：$path"
     elif [ $choice -eq 14 ]; then
+        if [ $is_installed == 0 ] ; then
+            red "请先安装V2Ray-WebSocket+TLS+Web！！"
+            exit 1
+        fi
+        change_protocol
+    elif [ $choice -eq 15 ]; then
         echo
         yellow "尝试修复退格键异常问题，退格键正常请不要修复"
         yellow "按回车键继续或按Ctrl+c退出"
@@ -1913,7 +1934,7 @@ start_menu()
         green "修复完成！！"
         sleep 1s
         start_menu
-    elif [ $choice -eq 15 ]; then
+    elif [ $choice -eq 16 ]; then
         change_dns
     fi
 }
