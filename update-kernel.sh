@@ -82,7 +82,7 @@ failed_version()
 }
 get_kernel_list()
 {
-    echo "getting the latest kernel version....(timeout 60)"
+    echo -e "${green}Info:${plain} Getting latest kernel version...(timeout 60s)"
     local kernel_list_temp=($(timeout 60 wget -qO- https://kernel.ubuntu.com/~kernel-ppa/mainline/ | awk -F'\"v' '/v[0-9]/{print $2}' | cut -d '"' -f1 | cut -d '/' -f1 | sort -rV))
     if [ ${#kernel_list_temp[@]} -le 1 ]; then
         echo "failed to get the latest kernel version"
@@ -365,7 +365,6 @@ install_bbr() {
             remove_kernel
         fi
     elif [[ x"${release}" == x"ubuntu" || x"${release}" == x"debian" ]]; then
-        echo -e "${green}Info:${plain} Getting latest kernel version..."
         get_latest_version
         local real_deb_name=${deb_name##*/}
         real_deb_name=${real_deb_name%%_*}"("${real_deb_name#*_}
