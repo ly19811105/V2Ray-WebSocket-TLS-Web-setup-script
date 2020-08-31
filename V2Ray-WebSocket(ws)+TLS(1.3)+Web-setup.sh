@@ -513,7 +513,6 @@ install_update_v2ray_ws_tls()
     fi
     sleep 1s
     systemctl start nginx
-    sleep 1s
     systemctl start v2ray
     if [ $update == 1 ]; then
         green "-------------------升级完成-------------------"
@@ -1904,7 +1903,7 @@ start_menu()
             stty erase '^?'
         fi
         green "修复完成！！"
-        sleep 1s
+        sleep 2s
         start_menu
     elif [ $choice -eq 16 ]; then
         change_dns
