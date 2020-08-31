@@ -18,19 +18,19 @@ latest_kernel_version=""
 #定义几个颜色
 tyblue()                           #天依蓝
 {
-    echo -e "\033[36;1m${1}\033[0m"
+    echo -e "\033[36;1m${@}\033[0m"
 }
 green()                            #水鸭青
 {
-    echo -e "\033[32;1m${1}\033[0m"
+    echo -e "\033[32;1m${@}\033[0m"
 }
 yellow()                           #鸭屎黄
 {
-    echo -e "\033[33;1m${1}\033[0m"
+    echo -e "\033[33;1m${@}\033[0m"
 }
 red()                              #姨妈红
 {
-    echo -e "\033[31;1m${1}\033[0m"
+    echo -e "\033[31;1m${@}\033[0m"
 }
 
 if [ "$EUID" != "0" ]; then
@@ -559,6 +559,7 @@ readDomain()
     tyblue "--------------------请选择域名解析情况--------------------"
     tyblue " 1. 一级域名和  www.一级域名  都解析到此服务器上"
     tyblue " 2. 仅一级域名或某个二(三)级域名解析到此服务器上"
+    echo
     while [ "$domainconfig" != "1" -a "$domainconfig" != "2" ]
     do
         read -p "您的选择是：" domainconfig
@@ -809,82 +810,43 @@ doupdate()
             yellow "按回车键继续。。。"
             read -s
         fi
-        sed -i '/Prompt/d' /etc/update-manager/release-upgrades
-        echo 'Prompt=normal' >> /etc/update-manager/release-upgrades
-        case "$choice" in
-            1)
-                do-release-upgrade -d
-                do-release-upgrade -d
-                sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
-                do-release-upgrade -d
-                do-release-upgrade -d
-                sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
-                do-release-upgrade
-                do-release-upgrade
-                sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
-                do-release-upgrade
-                do-release-upgrade
-                ;;
-            2)
-                if do-release-upgrade -c | grep -q "19\.10"; then
+        local i
+        for ((i=0;i<2;i++))
+        do
+            sed -i '/Prompt/d' /etc/update-manager/release-upgrades
+            echo 'Prompt=normal' >> /etc/update-manager/release-upgrades
+            case "$choice" in
+                1)
+                    do-release-upgrade -d
+                    do-release-upgrade -d
                     sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
                     do-release-upgrade -d
                     do-release-upgrade -d
                     sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
-                fi
-                do-release-upgrade
-                do-release-upgrade
-                ;;
-            3)
-                sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
-                do-release-upgrade
-                do-release-upgrade
-                ;;
-        esac
-        if ! version_ge $systemVersion 20.04; then
-            sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
-            do-release-upgrade -d
-            do-release-upgrade -d
-        fi
-        apt update
-        apt -y full-upgrade
-        sed -i '/Prompt/d' /etc/update-manager/release-upgrades
-        echo 'Prompt=normal' >> /etc/update-manager/release-upgrades
-        case "$choice" in
-            1)
-                do-release-upgrade -d
-                do-release-upgrade -d
-                sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
-                do-release-upgrade -d
-                do-release-upgrade -d
+                    do-release-upgrade
+                    do-release-upgrade
+                    sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
+                    do-release-upgrade
+                    do-release-upgrade
+                    ;;
+                2)
+                    do-release-upgrade
+                    do-release-upgrade
+                    ;;
+                3)
+                    sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
+                    do-release-upgrade
+                    do-release-upgrade
+                    ;;
+            esac
+            if ! version_ge $systemVersion 20.04; then
                 sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
                 do-release-upgrade
                 do-release-upgrade
-                sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
-                do-release-upgrade
-                do-release-upgrade
-                ;;
-            2)
-                if do-release-upgrade -c | grep -q "19\.10"; then
-                    sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
-                    do-release-upgrade -d
-                    do-release-upgrade -d
-                    sed -i 's/Prompt=lts/Prompt=normal/' /etc/update-manager/release-upgrades
-                fi
-                do-release-upgrade
-                do-release-upgrade
-                ;;
-            3)
-                sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
-                do-release-upgrade
-                do-release-upgrade
-                ;;
-        esac
-        if ! version_ge $systemVersion 20.04; then
-            sed -i 's/Prompt=normal/Prompt=lts/' /etc/update-manager/release-upgrades
-            do-release-upgrade -d
-            do-release-upgrade -d
-        fi
+            fi
+            apt update
+            apt -y full-upgrade
+        done
     }
     echo -e "\n\n\n"
     tyblue "-----------------------是否将更新系统组件？-----------------------"
@@ -1121,6 +1083,7 @@ install_bbr()
     else
         red "   bbr未启用！！"
     fi
+    echo
     choice=""
     while [ "$choice" != "1" -a "$choice" != "2" -a "$choice" != "3" -a "$choice" != "4" -a "$choice" != "5" -a "$choice" != "6" ]
     do
@@ -1153,7 +1116,7 @@ install_bbr()
             echo 'net.ipv4.tcp_congestion_control = bbr' >> /etc/sysctl.conf
             sysctl -p
             rm -rf update-kernel.sh
-            if ! wget https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/update-kernel.sh ; then
+            if ! wget -O update-kernel.sh https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/update-kernel.sh ; then
                 red    "获取内核升级脚本失败"
                 yellow "按回车键继续或者按ctrl+c终止"
                 read -s
@@ -1178,7 +1141,7 @@ install_bbr()
             sleep 1s
             if ! sysctl net.ipv4.tcp_congestion_control | grep -q "bbr" ; then
                 rm -rf bbr.sh
-                if ! wget https://github.com/teddysun/across/raw/master/bbr.sh ; then
+                if ! wget -O bbr.sh https://github.com/teddysun/across/raw/master/bbr.sh ; then
                     red    "获取bbr脚本失败"
                     yellow "按回车键继续或者按ctrl+c终止"
                     read -s
@@ -1197,13 +1160,13 @@ install_bbr()
             read -s
             rm -rf bbr2.sh
             if [ $release == ubuntu ] || [ $release == debian ]; then
-                if ! wget https://github.com/yeyingorg/bbr2.sh/raw/master/bbr2.sh ; then
+                if ! wget -O bbr2.sh https://github.com/yeyingorg/bbr2.sh/raw/master/bbr2.sh ; then
                     red    "获取bbr2脚本失败"
                     yellow "按回车键继续或者按ctrl+c终止"
                     read -s
                 fi
             else
-                if ! wget https://github.com/jackjieYYY/bbr2/raw/master/bbr2.sh ; then
+                if ! wget -O bbr2.sh https://github.com/jackjieYYY/bbr2/raw/master/bbr2.sh ; then
                     red    "获取bbr2脚本失败"
                     yellow "按回车键继续或者按ctrl+c终止"
                     read -s
@@ -1215,7 +1178,7 @@ install_bbr()
             ;;
         4)
             rm -rf tcp.sh
-            if ! wget "https://raw.githubusercontent.com/chiakge/Linux-NetSpeed/master/tcp.sh" ; then
+            if ! wget -O tcp.sh "https://raw.githubusercontent.com/chiakge/Linux-NetSpeed/master/tcp.sh" ; then
                 red    "获取bbrplus脚本失败"
                 yellow "按回车键继续或者按ctrl+c终止"
                 read -s
@@ -1396,16 +1359,10 @@ echo_end()
             tyblue " 服务器类型：VMess"
         fi
         get_all_domains
-        local temp=""
-        local i
-        for i in ${!all_domains[@]}
-        do
-            temp="$temp ${all_domains[i]}"
-        done
         if [ ${#all_domains[@]} -eq 1 ]; then
-            tyblue " 地址：$temp"
+            tyblue " 地址：${all_domains[@]}"
         else
-            tyblue " 地址：$temp (任选其一)"
+            tyblue " 地址：${all_domains[@]} (任选其一)"
         fi
         tyblue " 端口：443"
         tyblue " 用户ID：${v2id}"
@@ -1611,13 +1568,13 @@ get_webs()
         rm -rf /etc/nginx/html/${domain_list[i]}
         if [ ${pretend_list[i]} -eq 3 ]; then
             mkdir /etc/nginx/html/${domain_list[i]}
-            if ! wget -P /etc/nginx/html/${domain_list[i]} https://github.com/kirin10000/V2ray-WebSocket-TLS-Web-setup-script/raw/master/Website-Template.zip ; then
+            if ! wget -O /etc/nginx/html/${domain_list[i]}/Website-Template.zip https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/Website-Template.zip ; then
                 red    "获取网站模板失败"
                 yellow "按回车键继续或者按ctrl+c终止"
                 read -s
             fi
-            unzip -q -d /etc/nginx/html/${domain_list[i]} /etc/nginx/html/${domain_list[i]}/*.zip
-            rm -rf /etc/nginx/html/${domain_list[i]}/*.zip
+            unzip -q -d /etc/nginx/html/${domain_list[i]} /etc/nginx/html/${domain_list[i]}/Website-Template.zip
+            rm -rf /etc/nginx/html/${domain_list[i]}/Website-Template.zip
         fi
     done
 }
