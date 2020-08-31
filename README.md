@@ -8,7 +8,7 @@ https://github.com/kirin10000/V2Ray-TLS-Web-setup-script
  
 3.集成TLS配置多版本安装选项 
  
-4.集成删除防火墙、阿里云盾功能
+4.集成删除阿里云盾功能(仅对阿里云的服务器有效)
 
 5.使用nginx作为网站服务
 
