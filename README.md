@@ -8,7 +8,7 @@ https://github.com/kirin10000/V2Ray-TLS-Web-setup-script
  
 3.集成TLS配置多版本安装选项 
  
-4.集成删除阿里云盾和腾讯云盾功能(仅对阿里云和腾讯云服务器有效)
+4.集成删除阿里云盾和腾讯云盾功能 (仅对阿里云和腾讯云服务器有效)
 
 5.使用nginx作为网站服务
 
@@ -21,7 +21,7 @@ https://github.com/kirin10000/V2Ray-TLS-Web-setup-script
 3.在不同的ssh连接工具上文字的颜色显示不一样，有的看起来非常奇怪，还请谅解 (本人使用的是xshell)
 ## 脚本使用说明
 ### 1. 安装wget
-Debian基系统(包括Ubuntu、Debian)：
+Debian基系统(包括Ubuntu、Debian、deepin)：
 ```bash
 command -v wget > /dev/null 2>&1 || apt -y install wget || (apt update && apt -y install wget)
 ```
