@@ -4,7 +4,7 @@ https://github.com/kirin10000/V2Ray-TLS-Web-setup-script
 ## 脚本特性
 1.集成 多版本bbr/锐速 安装选项
  
-2.支持多种系统(Ubuntu CentOS Debian ...) 
+2.支持多种系统 (Ubuntu CentOS Debian deepin ...) 
  
 3.集成TLS配置多版本安装选项 
  
@@ -14,11 +14,11 @@ https://github.com/kirin10000/V2Ray-TLS-Web-setup-script
 
 6.使用acme.sh自动申请域名证书
 ## 注意事项
-1.此脚本需要一个解析到服务器的域名(支持cdn)
+1.此脚本需要一个解析到服务器的域名 (支持cdn)
 
 2.有些服务器443端口被阻断，使用这个脚本搭建的无法连接
 
-3.在不同的ssh连接工具上文字的颜色显示不一样，有的看起来非常奇怪，还请谅解（本人使用的是xshell）
+3.在不同的ssh连接工具上文字的颜色显示不一样，有的看起来非常奇怪，还请谅解 (本人使用的是xshell)
 ## 脚本使用说明
 ### 1. 安装wget
 Debian基系统(包括Ubuntu、Debian)：
@@ -51,7 +51,7 @@ chmod +x "V2Ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
 
 4.bbr脚本来自：https://github.com/teddysun/across/blob/master/bbr.sh
 
-5.bbr2脚本来自：https://github.com/yeyingorg/bbr2.sh (ubuntu debian) https://github.com/jackjieYYY/bbr2 (centos)
+5.bbr2脚本来自：https://github.com/yeyingorg/bbr2.sh (Ubuntu Debian) https://github.com/jackjieYYY/bbr2 (CentOS)
 
 6.bbrplus脚本来自：https://github.com/chiakge/Linux-NetSpeed
 
