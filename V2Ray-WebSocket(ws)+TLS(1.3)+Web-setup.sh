@@ -623,12 +623,11 @@ readProtocolConfig()
 {
     echo -e "\n\n\n"
     tyblue "---------------------请选择V2Ray要使用协议---------------------"
-    tyblue " 1. VLESS(新协议)"
-    tyblue " 2. VMess"
-    red    " 3. socks(5)(不推荐)"
+    tyblue " 1. VLESS"
+    tyblue " 2. VMessAEAD"
+    red    " 3. socks(5) (不推荐)"
     echo
-    green  "不使用cdn推荐VLESS，cdn推荐使用VMess"
-    yellow "VLESS需要V2RayN客户端版本>=3.21，V2RayNG客户端版本>=1.3.0"
+    green  "不使用cdn推荐VLESS，使用cdn推荐VMessAEAD"
     echo
     protocol=""
     while [[ "$protocol" != "1" && "$protocol" != "2" && "$protocol" != "3" ]]
@@ -1382,6 +1381,10 @@ echo_end()
         tyblue " 底层传输安全：tls"
         tyblue " allowInsecure：false"
         tyblue "---------------------------------------"
+        if [ $protocol -eq 2 ]; then
+            echo
+            yellow "请尽快将V2Ray升级至v4.28.0+以开启VMessAEAD"
+        fi
     else
         echo_end_socks
     fi
@@ -1390,7 +1393,7 @@ echo_end()
     tyblue " 修改$nginx_config"
     tyblue " 将v.qq.com修改为你要镜像的网站"
     echo
-    tyblue " 脚本最后更新时间：2020.08.29"
+    tyblue " 脚本最后更新时间：2020.09.12"
     echo
     red    " 此脚本仅供交流学习使用，请勿使用此脚本行违法之事。网络非法外之地，行非法之事，必将接受法律制裁!!!!"
     tyblue " 2019.11"
