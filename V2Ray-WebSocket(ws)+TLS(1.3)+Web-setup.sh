@@ -624,10 +624,10 @@ readProtocolConfig()
     echo -e "\n\n\n"
     tyblue "---------------------请选择V2Ray要使用协议---------------------"
     tyblue " 1. VLESS"
-    tyblue " 2. VMessAEAD"
+    tyblue " 2. VMess(AEAD)"
     red    " 3. socks(5) (不推荐)"
     echo
-    green  "不使用cdn推荐VLESS，使用cdn推荐VMessAEAD"
+    green  "不使用cdn推荐VLESS，使用cdn推荐VMess(AEAD)"
     echo
     protocol=""
     while [[ "$protocol" != "1" && "$protocol" != "2" && "$protocol" != "3" ]]
@@ -908,22 +908,39 @@ uninstall_firewall()
     systemctl disable firewalld
     yum -y remove firewalld
     green "正在删除阿里云盾和腾讯云盾 (仅对阿里云和腾讯云服务器有效)。。。"
+#阿里云盾
+    systemctl stop CmsGoAgent
+    systemctl disable CmsGoAgent
+    rm -rf /usr/local/cloudmonitor
+    rm -rf /etc/systemd/system/CmsGoAgent.service
+    systemctl daemon-reload
+
+    systemctl stop aliyun
+    systemctl disable aliyun
+    rm -rf /etc/systemd/system/aliyun.service
+    systemctl daemon-reload
     apt -y purge aliyun-assist
     yum -y remove aliyun_assist
-    rm -rf $(find / -iname *aliyun* 2>/dev/null)
-    rm -rf $(find / -iname *CmsGoAgent* 2>/dev/null)
-    rm -rf /usr/local/aegis
-    rm -rf /usr/local/cloudmonitor
-    pkill -9 CmsGoAgent
-    pkill -9 aliyun-service
+    rm -rf /usr/local/share/aliyun-assist
+    rm -rf /usr/sbin/aliyun_installer
+    rm -rf /usr/sbin/aliyun-service
+    rm -rf /usr/sbin/aliyun-service.backup
+
     pkill -9 AliYunDun
-    service aegis stop
+    pkill -9 AliHids
+    /etc/init.d/aegis uninstall
+    rm -rf /usr/local/aegis
     rm -rf /etc/init.d/aegis
-    rm -rf /usr/local/qcloud
+    rm -rf /etc/rc2.d/S80aegis
+    rm -rf /etc/rc3.d/S80aegis
+    rm -rf /etc/rc4.d/S80aegis
+    rm -rf /etc/rc5.d/S80aegis
+#腾讯云盾
     pkill -9 YDService
     pkill -9 YDLive
     pkill -9 sgagent
     pkill -9 barad_agent
+    rm -rf /usr/local/qcloud
 }
 
 #卸载v2ray和nginx
@@ -933,16 +950,16 @@ remove_v2ray_nginx()
     curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh
     bash install-release.sh --remove
     systemctl disable v2ray
-    rm -rf /etc/systemd/system/v2ray.service
     rm -rf /usr/bin/v2ray
     rm -rf /etc/v2ray
-    rm -rf /etc/systemd/system/v2ray@.service
     rm -rf /usr/local/bin/v2ray
     rm -rf /usr/local/etc/v2ray
+    rm -rf /etc/systemd/system/v2ray.service
+    rm -rf /etc/systemd/system/v2ray@.service
     systemctl daemon-reload
     systemctl stop nginx
     /etc/nginx/sbin/nginx -s stop
-    pkill nginx
+    pkill -9 nginx
     systemctl disable nginx
     rm -rf /etc/systemd/system/nginx.service
     systemctl daemon-reload
