@@ -431,13 +431,7 @@ install_update_v2ray_ws_tls()
         exit 1
     fi
     if [ $update == 1 ]; then
-        mkdir "${temp_dir}/domain_backup"
-        for i in ${!domain_list[@]}
-        do
-            if [ ${pretend_list[i]} == 1 ]; then
-                mv /etc/nginx/html/${domain_list[i]} "${temp_dir}/domain_backup"
-            fi
-        done
+        backup_domains_web
     fi
     remove_v2ray_nginx
     if ! make install; then
@@ -1796,13 +1790,7 @@ start_menu()
         get_base_information
         get_domainlist
         enter_temp_dir
-        mkdir "${temp_dir}/domain_backup"
-        for i in ${!domain_list[@]}
-        do
-            if [ ${pretend_list[i]} == 1 ]; then
-                mv /etc/nginx/html/${domain_list[i]} "${temp_dir}/domain_backup"
-            fi
-        done
+        backup_domains_web
         readDomain
         get_all_certs
         get_webs
@@ -1960,6 +1948,17 @@ enter_temp_dir()
     rm -rf "$temp_dir"
     mkdir "$temp_dir"
     cd "$temp_dir"
+}
+
+#备份域名伪装网站
+backup_domains_web()
+{
+    local i
+    mkdir "${temp_dir}/domain_backup"
+    for i in ${!domain_list[@]}
+    do
+        mv /etc/nginx/html/${domain_list[i]} "${temp_dir}/domain_backup"
+    done
 }
 
 if ! [ "$1" == "--update" ]; then
