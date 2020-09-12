@@ -1383,7 +1383,7 @@ echo_end()
         tyblue "---------------------------------------"
         if [ $protocol -eq 2 ]; then
             echo
-            yellow "请尽快将V2Ray升级至v4.28.0+以开启VMessAEAD"
+            yellow " 请尽快将V2Ray升级至v4.28.0+以启用VMessAEAD"
         fi
     else
         echo_end_socks
