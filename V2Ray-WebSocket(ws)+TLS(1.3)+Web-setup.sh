@@ -217,7 +217,7 @@ server {
     root /etc/nginx/html/${domain_list[i]};
 }
 EOF
-        sleep 1s
+        sleep 2s
         systemctl restart nginx
         if [ ${domainconfig_list[i]} -eq 1 ]; then
             if ! $HOME/.acme.sh/acme.sh --issue -d ${domain_list[i]} -d www.${domain_list[i]} --webroot /etc/nginx/html/${domain_list[i]} -k ec-256 -ak ec-256 --ocsp; then
@@ -228,7 +228,7 @@ EOF
                 $HOME/.acme.sh/acme.sh --issue -d ${domain_list[i]} --webroot /etc/nginx/html/${domain_list[i]} -k ec-256 -ak ec-256 --ocsp --debug
             fi
         fi
-        if ! $HOME/.acme.sh/acme.sh --installcert -d ${domain_list[i]} --key-file /etc/nginx/certs/${domain_list[i]}.key --fullchain-file /etc/nginx/certs/${domain_list[i]}.cer --reloadcmd "sleep 1s && systemctl restart nginx" --ecc; then
+        if ! $HOME/.acme.sh/acme.sh --installcert -d ${domain_list[i]} --key-file /etc/nginx/certs/${domain_list[i]}.key --fullchain-file /etc/nginx/certs/${domain_list[i]}.cer --reloadcmd "sleep 2s && systemctl restart nginx" --ecc; then
             yellow "证书安装失败，请检查您的域名，确保80端口未打开并且未被占用。并在安装完成后，使用选项8修复"
             yellow "按回车键继续。。。"
             read -s
@@ -484,7 +484,7 @@ install_update_v2ray_ws_tls()
     else
         get_webs
     fi
-    sleep 1s
+    sleep 2s
     systemctl start nginx
     systemctl start v2ray
     if [ $update == 1 ]; then
@@ -1778,7 +1778,7 @@ start_menu()
         get_all_certs
         get_webs
         config_nginx
-        sleep 1s
+        sleep 2s
         systemctl start nginx
         green "-------域名重置完成-------"
         echo_end
@@ -1796,7 +1796,7 @@ start_menu()
         get_webs
         mv "${temp_dir}/domain_backup/"* /etc/nginx/html 2>/dev/null
         config_nginx
-        sleep 1s
+        sleep 2s
         systemctl start nginx
         green "-------域名添加完成-------"
         echo_end
@@ -1909,7 +1909,7 @@ start_menu()
             stty erase '^?'
         fi
         green "修复完成！！"
-        sleep 2s
+        sleep 3s
         start_menu
     elif [ $choice -eq 16 ]; then
         change_dns
