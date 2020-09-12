@@ -207,7 +207,7 @@ get_all_certs()
 {
     local i
     config_nginx_init
-    mv $nginx_config $nginx_config.bak
+    mv $nginx_config $nginx_config.bak 2>/dev/null
     for ((i=0;i<${#domain_list[@]};i++))
     do
 cat > $nginx_config<<EOF
@@ -235,7 +235,7 @@ EOF
         fi
     done
     systemctl stop nginx
-    mv $nginx_config.bak $nginx_config
+    mv $nginx_config.bak $nginx_config 2>/dev/null
 }
 
 #获取配置信息 path port v2id protocol tlsVersion
@@ -285,7 +285,7 @@ get_domainlist()
         else
             domainconfig_list[i]=1
         fi
-        if awk 'NR=='"$(($line+18))"' {print $0}' $nginx_config | grep -q "location / {"; then
+        if awk 'NR=='"$(($line+19-$tlsVersion))"' {print $0}' $nginx_config | grep -q "location / {"; then
             pretend_list[i]=2
         else
             pretend_list[i]=1
@@ -368,8 +368,8 @@ install_update_v2ray_ws_tls()
         readTlsConfig
         readProtocolConfig
     else
-        get_domainlist
         get_base_information
+        get_domainlist
     fi
     ##安装依赖
     if [ $release == centos ] || [ $release == redhat ]; then
@@ -480,7 +480,7 @@ install_update_v2ray_ws_tls()
     config_v2ray
     config_nginx
     if [ $update == 1 ]; then
-        mv "${temp_dir}/domain_backup/"* /etc/nginx/html
+        mv "${temp_dir}/domain_backup/"* /etc/nginx/html 2>/dev/null
     else
         get_webs
     fi
@@ -1790,11 +1790,11 @@ start_menu()
         get_base_information
         get_domainlist
         enter_temp_dir
-        backup_domains_web
+        backup_domains_web cp
         readDomain
         get_all_certs
         get_webs
-        mv "${temp_dir}/domain_backup/"* /etc/nginx/html
+        mv "${temp_dir}/domain_backup/"* /etc/nginx/html 2>/dev/null
         config_nginx
         sleep 1s
         systemctl start nginx
@@ -1806,6 +1806,7 @@ start_menu()
             red "请先安装V2Ray-WebSocket+TLS+Web！！"
             exit 1
         fi
+        get_base_information
         get_domainlist
         if [ ${#domain_list[@]} -le 1 ]; then
             red "只有一个域名"
@@ -1836,7 +1837,6 @@ start_menu()
         domain_list=(${domain_list[@]})
         domainconfig_list=(${domainconfig_list[@]})
         pretend_list=(${pretend_list[@]})
-        get_base_information
         config_nginx
         systemctl restart nginx
         green "-------删除域名完成-------"
@@ -1957,7 +1957,11 @@ backup_domains_web()
     mkdir "${temp_dir}/domain_backup"
     for i in ${!domain_list[@]}
     do
-        mv /etc/nginx/html/${domain_list[i]} "${temp_dir}/domain_backup"
+        if [ "$1" == "cp" ]; then
+            cp -rf /etc/nginx/html/${domain_list[i]} "${temp_dir}/domain_backup" 2>/dev/null
+        else
+            mv /etc/nginx/html/${domain_list[i]} "${temp_dir}/domain_backup" 2>/dev/null
+        fi
     done
 }
 
