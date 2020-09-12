@@ -3,6 +3,7 @@ nginx_version="nginx-1.19.2"
 openssl_version="openssl-openssl-3.0.0-alpha6"
 v2ray_config="/usr/local/etc/v2ray/config.json"
 nginx_config="/etc/nginx/conf.d/v2ray.conf"
+temp_dir="/temp_install_update_v2ray_ws_tls"
 
 unset domain_list
 unset domainconfig_list
@@ -125,18 +126,12 @@ get_all_domains()
 config_nginx()
 {
     local i
+    get_all_domains
 cat > $nginx_config<<EOF
 server {
     listen 80 fastopen=100 reuseport default_server;
     listen [::]:80 fastopen=100 reuseport default_server;
-EOF
-    if [ ${domainconfig_list[0]} -eq 1 ]; then
-        echo "    return 301 https://www.${domain_list[0]};" >> $nginx_config
-    else
-        echo "    return 301 https://${domain_list[0]};" >> $nginx_config
-    fi
-    get_all_domains
-cat >> $nginx_config<<EOF
+    return 301 https://${all_domains[0]};
 }
 server {
     listen 80;
@@ -151,20 +146,12 @@ server {
     ssl_certificate_key     /etc/nginx/certs/${domain_list[0]}.key;
 EOF
     if [ $tlsVersion -eq 1 ]; then
-cat >> $nginx_config<<EOF
-    ssl_protocols           TLSv1.3 TLSv1.2;
-    ssl_ciphers             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
-EOF
+        echo "    ssl_protocols           TLSv1.3 TLSv1.2;" >> $nginx_config
+        echo "    ssl_ciphers             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;" >> $nginx_config
     else
-cat >> $nginx_config<<EOF
-    ssl_protocols           TLSv1.3;
-EOF
+        echo "    ssl_protocols           TLSv1.3;" >> $nginx_config
     fi
-    if [ ${domainconfig_list[0]} -eq 1 ]; then
-        echo "    return 301 https://www.${domain_list[0]};" >> $nginx_config
-    else
-        echo "    return 301 https://${domain_list[0]};" >> $nginx_config
-    fi
+    echo "    return 301 https://${all_domains[0]};" >> $nginx_config
     echo "}" >> $nginx_config
     for ((i=0;i<${#domain_list[@]};i++))
     do
@@ -183,14 +170,10 @@ cat >> $nginx_config<<EOF
     ssl_certificate_key     /etc/nginx/certs/${domain_list[i]}.key;
 EOF
         if [ $tlsVersion -eq 1 ]; then
-cat >> $nginx_config<<EOF
-    ssl_protocols           TLSv1.3 TLSv1.2;
-    ssl_ciphers             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;
-EOF
+            echo "    ssl_protocols           TLSv1.3 TLSv1.2;" >> $nginx_config
+            echo "    ssl_ciphers             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305;" >> $nginx_config
         else
-cat >> $nginx_config<<EOF
-    ssl_protocols           TLSv1.3;
-EOF
+            echo "    ssl_protocols           TLSv1.3;" >> $nginx_config
         fi
 cat >> $nginx_config<<EOF
     ssl_stapling            on;
@@ -289,9 +272,8 @@ get_base_information()
 #获取域名列表
 get_domainlist()
 {
-    local domain_total=$(($(grep "server_name" $nginx_config | wc -l)-1))
     unset domain_list
-    domain_list=($(grep server_name $nginx_config | sed 's/;//g' | tail -n $domain_total  | awk '{print $NF}'))
+    domain_list=($(grep server_name $nginx_config | sed 's/;//g' | awk 'NR>1 {print $NF}'))
     local line
     local i
     for i in ${!domain_list[@]}
@@ -377,9 +359,7 @@ install_update_v2ray_ws_tls()
         echo 'net.ipv4.tcp_fastopen = 3' >> /etc/sysctl.conf
         sysctl -p
     fi
-    rm -rf /temp_install_update_v2ray_ws_tls
-    mkdir /temp_install_update_v2ray_ws_tls
-    cd /temp_install_update_v2ray_ws_tls
+    enter_temp_dir
     install_bbr
     apt -y -f install
     #读取域名
@@ -451,11 +431,11 @@ install_update_v2ray_ws_tls()
         exit 1
     fi
     if [ $update == 1 ]; then
-        mkdir ../domain_backup
+        mkdir "${temp_dir}/domain_backup"
         for i in ${!domain_list[@]}
         do
             if [ ${pretend_list[i]} == 1 ]; then
-                mv /etc/nginx/html/${domain_list[i]} ../domain_backup
+                mv /etc/nginx/html/${domain_list[i]} "${temp_dir}/domain_backup"
             fi
         done
     fi
@@ -506,7 +486,7 @@ install_update_v2ray_ws_tls()
     config_v2ray
     config_nginx
     if [ $update == 1 ]; then
-        mv domain_backup/* /etc/nginx/html
+        mv "${temp_dir}/domain_backup/"* /etc/nginx/html
     else
         get_webs
     fi
@@ -519,7 +499,7 @@ install_update_v2ray_ws_tls()
         green "-------------------安装完成-------------------"
     fi
     echo_end
-    rm -rf /temp_install_update_v2ray_ws_tls
+    rm -rf "$temp_dir"
 }
 
 #读取域名
@@ -1752,15 +1732,11 @@ start_menu()
         "$0" --update
     elif [ $choice -eq 3 ]; then
         apt -y -f install
-        rm -rf /temp_install_update_v2ray_ws_tls
-        mkdir /temp_install_update_v2ray_ws_tls
-        cd /temp_install_update_v2ray_ws_tls
+        enter_temp_dir
         install_bbr
-        rm -rf /temp_install_update_v2ray_ws_tls
+        rm -rf "$temp_dir"
     elif [ $choice -eq 4 ]; then
-        rm -rf /temp_install_update_v2ray_ws_tls
-        mkdir /temp_install_update_v2ray_ws_tls
-        cd /temp_install_update_v2ray_ws_tls
+        enter_temp_dir
         if ! curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh; then
             yellow "获取V2Ray安装脚本失败"
         fi
@@ -1768,7 +1744,7 @@ start_menu()
                 yellow "V2Ray更新失败"
         fi
         green "----------------升级完成----------------"
-        rm -rf /temp_install_update_v2ray_ws_tls
+        rm -rf "$temp_dir"
     elif [ $choice -eq 5 ]; then
         choice=""
         while [ "$choice" != "y" -a "$choice" != "n" ]
@@ -1803,8 +1779,8 @@ start_menu()
             exit 1
         fi
         readDomain
-        readTlsConfig
         get_base_information
+        readTlsConfig
         get_all_certs
         get_webs
         config_nginx
@@ -1819,14 +1795,24 @@ start_menu()
         fi
         get_base_information
         get_domainlist
+        enter_temp_dir
+        mkdir "${temp_dir}/domain_backup"
+        for i in ${!domain_list[@]}
+        do
+            if [ ${pretend_list[i]} == 1 ]; then
+                mv /etc/nginx/html/${domain_list[i]} "${temp_dir}/domain_backup"
+            fi
+        done
         readDomain
         get_all_certs
         get_webs
+        mv "${temp_dir}/domain_backup/"* /etc/nginx/html
         config_nginx
         sleep 1s
         systemctl start nginx
         green "-------域名添加完成-------"
         echo_end
+        rm -rf "$temp_dir"
     elif [ $choice -eq 11 ]; then
         if [ $is_installed == 0 ] ; then
             red "请先安装V2Ray-WebSocket+TLS+Web！！"
@@ -1885,7 +1871,7 @@ start_menu()
             read choice
         done
         if [ $choice == "n" ]; then
-            exit 0;
+            exit 0
         fi
         tyblue "-------------请输入新的ID-------------"
         read v2id
@@ -1907,7 +1893,7 @@ start_menu()
             read choice
         done
         if [ $choice == "n" ]; then
-                exit 0
+            exit 0
         fi
         local temp_old_path="$path"
         tyblue "---------------请输入新的path(带\"/\")---------------"
@@ -1966,6 +1952,14 @@ change_dns()
         fi
         green "修改完成！！"
     fi
+}
+
+#进入工作目录
+enter_temp_dir()
+{
+    rm -rf "$temp_dir"
+    mkdir "$temp_dir"
+    cd "$temp_dir"
 }
 
 if ! [ "$1" == "--update" ]; then
