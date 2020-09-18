@@ -343,7 +343,7 @@ install_update_v2ray_ws_tls()
     fi
     apt -y -f install
     check_important_dependence_installed ca-certificates ca-certificates
-    check_important_dependence_installed lsb-release lsb_release
+    check_important_dependence_installed lsb-release redhat-lsb-core
     #系统版本
     systemVersion=`lsb_release -r --short`
     systemctl stop nginx
