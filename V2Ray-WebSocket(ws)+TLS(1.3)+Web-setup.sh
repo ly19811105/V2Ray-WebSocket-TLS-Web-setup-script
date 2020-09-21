@@ -195,9 +195,9 @@ cat >> $nginx_config<<EOF
     ssl_trusted_certificate ${nginx_prefix}/certs/${domain_list[i]}.cer;
     add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload" always;
 EOF
-    if [ ${pretend_list[i]} -eq 3 ]; then
-        echo "    root ${nginx_prefix}/html/${domain_list[i]};" >> $nginx_config
-    fi
+        if [ ${pretend_list[i]} -eq 3 ]; then
+            echo "    root ${nginx_prefix}/html/${domain_list[i]};" >> $nginx_config
+        fi
 cat >> $nginx_config<<EOF
     location = $path {
         proxy_redirect off;
