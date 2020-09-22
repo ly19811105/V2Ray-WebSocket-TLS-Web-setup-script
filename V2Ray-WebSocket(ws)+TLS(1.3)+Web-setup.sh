@@ -341,7 +341,7 @@ install_nginx()
     if ! make; then
         red    "nginx编译失败！"
         yellow "请尝试更换系统，建议使用Ubuntu最新版系统"
-        green  "欢迎进行Bug report(https://github.com/kirin10000/V2Ray-TLS-Web-setup-script/issues)，感谢您的支持"
+        green  "欢迎进行Bug report(https://github.com/ly19811105/V2Ray-TLS-Web-setup-script/issues)，感谢您的支持"
         exit 1
     fi
     if [ $update == 1 ]; then
@@ -351,7 +351,7 @@ install_nginx()
     if ! make install; then
         red    "nginx安装失败！"
         yellow "请尝试更换系统，建议使用Ubuntu最新版系统"
-        green  "欢迎进行Bug report(https://github.com/kirin10000/V2Ray-TLS-Web-setup-script/issues)，感谢您的支持"
+        green  "欢迎进行Bug report(https://github.com/ly19811105/V2Ray-TLS-Web-setup-script/issues)，感谢您的支持"
         exit 1
     fi
     cd ..
@@ -1179,7 +1179,7 @@ install_bbr()
             echo 'net.ipv4.tcp_congestion_control = bbr' >> /etc/sysctl.conf
             sysctl -p
             rm -rf update-kernel.sh
-            if ! wget -O update-kernel.sh https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/update-kernel.sh ; then
+            if ! wget -O update-kernel.sh https://github.com/ly19811105/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/update-kernel.sh ; then
                 red    "获取内核升级脚本失败"
                 yellow "按回车键继续或者按ctrl+c终止"
                 read -s
@@ -1637,7 +1637,7 @@ get_web()
     if [ $2 -eq 3 ]; then
         rm -rf ${nginx_prefix}/html/$1
         mkdir ${nginx_prefix}/html/$1
-        if ! wget -O ${nginx_prefix}/html/$1/Website-Template.zip https://github.com/kirin10000/V2Ray-TLS-Web-setup-script/raw/master/Website-Template.zip; then
+        if ! wget -O ${nginx_prefix}/html/$1/Website-Template.zip https://github.com/ly19811105/V2Ray-TLS-Web-setup-script/raw/master/Website-Template.zip; then
             red    "获取网站模板失败"
             yellow "按回车键继续或者按ctrl+c终止"
             read -s
@@ -1708,7 +1708,7 @@ start_menu()
     echo
     tyblue "            Nginx：            ${nginx_status}"
     echo
-    tyblue " 官网：https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script"
+    tyblue " 官网：https://github.com/ly19811105/V2Ray-WebSocket-TLS-Web-setup-script"
     echo
     tyblue "----------------------------------注意事项---------------------------------"
     yellow " 此脚本需要一个解析到本服务器的域名!!!!"
@@ -1775,7 +1775,7 @@ start_menu()
             exit 1
         fi
         rm -rf "$0"
-        wget -O "$0" "https://github.com/kirin10000/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2Ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
+        wget -O "$0" "https://github.com/ly19811105/V2Ray-WebSocket-TLS-Web-setup-script/raw/master/V2Ray-WebSocket(ws)+TLS(1.3)+Web-setup.sh"
         chmod +x "$0"
         "$0" --update
     elif [ $choice -eq 3 ]; then
